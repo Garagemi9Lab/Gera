@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Gera Login</title>
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-rc.2/css/materialize.min.css">
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-rc.2/js/materialize.min.js"></script>
+
+    <link rel="stylesheet" href="/stylesheets/login.css"
+
+</head>
+
+<body>
+    <div id="userInteractOverlay" class="userInteractOverlay hide">
+
+    </div>
+    <div class="container fullHeight valign-wrapper">
+        <div class="row fullWidth">
+            <div class="col s12 m8 offset-m2 l6 offset-l3">
+                <div class="card-panel grey lighten-4">
+                    <div class="row">
+                        <div id="alertBox" class="col s12 hide">
+                            <br>
+                            <div class="card-painel white-text center-align">
+
+                            </div>
+                        </div>
+                        <div class="input-field col s12">
+                            <input id="username" type="text" class="validate">
+                            <label for="username">Username</label>
+                        </div>
+                        <div class="input-field col s12">
+                            <input id="password" type="password" class="validate">
+                            <label for="password">Password</label>
+                        </div>
+                        <div class="input-field col s12 ">
+                            <a class="waves-effect waves-light btn fullWidth" id="loginBtn">Login</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="javascripts/util.js"></script>
+    <script src="javascripts/xhr.js"></script>
+    <script src="javascripts/login.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>GeraBot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/stylesheets/app.css">
+  <link rel="stylesheet" href="/stylesheets/bot.css">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script src="/javascripts/jquery-2.2.3.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+  <script src="javascripts/util.js"></script>
+  <script>
+    if(!sessionCheck('user')){
+      alert('You don\'t have access to this page.')
+      window.location.href = '/'
+    }
+  </script>
+</head>
+
+<body>
+  <div class="chat-col">
+    <div class="chatbox" style="display: none;">
+      <div class="head">
+        <div class="container">
+          <div class="avatar">
+            <img src="img/logo.png" alt=""></img>
+          </div>
+        </div>
+      </div>
+      <!-- /head -->
+      <div id="tabs">
+        <ul>
+          <li>
+            <a href="#aba-1">
+              <i class="fa fa-comments align-center"></i>
+            </a>
+          </li>
+          <li>
+            <a href="#aba-2">
+              <i class="fa fa-bar-chart align-center"></i>
+            </a>
+          </li>
+          <li>
+            <a href="#aba-3">
+              <i class="fa fa-tags align-center"></i>
+            </a>
+          </li>
+        </ul>
+        <div id="aba-1">
+          <div id="chatlogs"></div>
+        </div>
+        <div id="aba-2">
+          <div class="chat-dados">
+            <div class="row">
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons valor-pagar">monetization_on</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span> Valor a Pagar</span>
+                  <p>R$ 1.000,00</p>
+                </div>
+              </div>
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons ciclo">donut_large</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span>Ciclo</span>
+                  <p>07/2018</p>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons estrela">star</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span> Pedido Mín.</span>
+                  <p>R$ 200,00</p>
+                </div>
+              </div>
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons pedido">description</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span> Pedido</span>
+                  <p>R$ 1.000,00</p>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons carteira">account_balance_wallet</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span>Crédito Disponível</span>
+                  <p>R$ 11.050,99</p>
+                </div>
+              </div>
+              <div class="col-6 d-flex justify-center">
+                <div class="col d-flex">
+                  <i class="material-icons torta">timelapse</i>
+                </div>
+                <div class="col chat-dados-p align-center">
+                  <span>Falta pouco</span>
+                  <br>
+                  <span>para ganhar</span>
+                  <p>R$ 200,00</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="aba-3">
+          <div class="row" id="promotions_div">
+          </div>
+        </div>
+      </div>
+      <div class="chat-form">
+        <input id="textInput" onkeydown="sendToBot(event, this)" placeholder="Digite algo..." />
+        <button id="sendBtn" disabled>
+          <i class="botao fa fa-arrow-circle-right fa-3x"></i>
+        </button>
+      </div>
+    </div>
+    <div class="chat-button">
+      <i class="fa fa-2x fa-comments"></i>
+    </div>
+  </div>
+  <script src="/javascripts/xhr.js"></script>
+  <script src="/javascripts/chat.js"></script>
+  <script src="/javascripts/index.js"></script>
+</body>
+</html>
