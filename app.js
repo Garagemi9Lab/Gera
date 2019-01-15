@@ -105,6 +105,7 @@ const sendToWatson = (params) => {
             })
             break;
 
+            
           case "select_business_model":
             Gera.getBusinessModelDeliveryMode(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
