@@ -664,6 +664,15 @@ transition: 0.5s;
   align-items: center;
   padding-top: 3px;
   z-index: 99;
+  position: relative;
+}
+
+.block_div{
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .chat-form #textInput{
@@ -774,7 +783,72 @@ transition: 0.5s;
     margin-top: 5px;
   }
 
+.quick_reply_bubble .chat-message{
+    padding: 5px;
+
+}
+.typing_bubble .chat-message{
+    padding: 5px;
+
+}
+
 .typing-gif{
   width: 40px;
   height: 30px;
+}
+
+.quick_reply_checklists_div{
+  display: flex;
+  flex-direction: column;
+}
+
+.quick_reply_checklist_div{
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #000;
+  border-radius: 6px;
+  margin-top: 5px;
+  padding: 5px;
+}
+
+.quick_reply_title{
+  font-weight: bold;
+}
+
+.quick_reply_checklist_products{
+  display: flex;
+  flex-direction: column;
+  margin-top: 5px;
+  
+}
+
+.quick_reply_checklist_product{
+  display: flex;
+}
+.quick_reply_checklist_product label {
+    font-size: 8pt
+}
+
+.quick_reply_checklist_btn_div{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.quick_reply_checklist_btn_div button {
+  border: none;
+  background-color: transparent;
+  border: 1px solid #000;
+  border-radius: 6px;
+  padding: 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.quick_reply_checklist_btn_div button:active{
+    background-color: #757575;
+    color: #fff;
+    border:none;
+    border: 1px solid #fff;
 }

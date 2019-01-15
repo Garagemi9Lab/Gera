@@ -14,7 +14,7 @@
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
   <script src="javascripts/util.js"></script>
   <script>
-    if(!sessionCheck('user')){
+    if (!sessionCheck('user')) {
       alert('You don\'t have access to this page.')
       window.location.href = '/'
     }
@@ -124,7 +124,7 @@
           </div>
         </div>
       </div>
-      <div class="chat-form">
+      <div class="chat-form" id="chat_footer">
         <input id="textInput" onkeydown="sendToBot(event, this)" placeholder="Digite algo..." />
         <button id="sendBtn" disabled>
           <i class="botao fa fa-arrow-circle-right fa-3x"></i>
@@ -139,4 +139,5 @@
   <script src="/javascripts/chat.js"></script>
   <script src="/javascripts/index.js"></script>
 </body>
+
 </html>

@@ -46,9 +46,7 @@ app.post('/message', (req, res) => {
   let params = req.body
   if (Object.keys(params.context).length == 0) {
     Gera.getToken(params.loggedUser).then((result) => {
-      params.context.token = result.access_token
-      params.context.expiredToken = false
-      params.context.user = { id: result.user_id }
+      params.context.userPayload = result
       sendToWatson(params).then((watsonData) => res.status(200).json(watsonData))
     })
   } else {
@@ -67,6 +65,72 @@ const sendToWatson = (params) => {
     Bot.sendMessage(params).then((watsonData) => {
       if (watsonData.output && watsonData.output.action) {
         switch (watsonData.output.action) {
+          case "check_user_informations":
+            Gera.checkUserInformations(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result)
+              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
+            }).catch(error => {
+              console.log('Error on checking user info')
+              console.log(error)
+            })
+            break;
+
+          case "check_pending_orders":
+            Gera.checkPendingOrders(watsonData).then((result) => {
+              sendToWatson({
+                context: watsonData.context,
+                input: {
+                  pendingOrders: result.pendingOrders
+                }
+              }).then((data) => resolve(data))
+            }).catch(error => {
+              console.log('Error on checking user info')
+              console.log(error)
+            })
+            break;
+
+          case "get_business_models":
+            Gera.getBusinessModels(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result)
+              sendToWatson({
+                context: watsonData.context,
+                input: {
+                  action: 'showBusinessModels',
+                  quick_replies: new QuickReplies(result.userPayload.businessModels, 'businessModels')
+                }
+              }).then((data) => resolve(data))
+            }).catch(error => {
+              console.log('Error on getting business models')
+              console.log(error)
+            })
+            break;
+
+          case "select_business_model":
+            Gera.getBusinessModelDeliveryMode(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result)
+              sendToWatson({
+                context: watsonData.context,
+                input: {
+                  action: 'showDeliveryModes',
+                  quick_replies: new QuickReplies(result.userPayload.deliveryModes, 'deliveryModes')
+                }
+              }).then((data) => resolve(data))
+            })
+            break;
+
+          case "select_BM_delivery_mode":
+            Gera.getStarterKit(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result)
+              sendToWatson({
+                context: watsonData.context,
+                input: {
+                  action: 'showStarterKits',
+                  quick_replies: new QuickReplies(result.userPayload.starterKits, 'starterKits')
+                }
+              }).then((data) => resolve(data))
+            })
+            break;
+
           case "check_orders":
             Gera.checkUserOrders(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
@@ -326,6 +390,64 @@ const sendToWatson = (params) => {
     })
   })
 }
+
+
+function QuickReplies(payload, action) {
+  let quick_replies = []
+  switch (action) {
+    case 'businessModels':
+      quick_replies = payload.reduce((acc, curr) => {
+        acc.push({
+          title: curr.name,
+          type: 'button',
+          payload: {
+            value: curr.code
+          }
+        })
+        return acc
+      }, [])
+      break;
+
+    case 'deliveryModes':
+      quick_replies = payload.reduce((acc, curr) => {
+        acc.push({
+          title: curr.address,
+          type: 'button',
+          payload: {
+            value: curr.code
+          }
+        })
+        return acc
+      }, [])
+      break;
+
+    case "starterKits":
+
+      quick_replies = [
+        {
+          type: 'checklists',
+          payload: {
+            lists: payload.reduce((acc, curr) => {
+              acc.push({
+                title: `${curr.sourceInfo.description}`,
+                type: 'checklist',
+                payload: {
+                  value: curr.code,
+                  listCode: curr.code,
+                  listProducts: curr.products.map(product => ({ code: product.code, name: product.name }))
+                }
+              })
+              return acc
+            }, [])
+          }
+        }
+      ]
+      break;
+  }
+
+  return quick_replies
+}
+
 
 app.post('/api/getPromotions', (req, res) => {
   Gera.checkPromotions(req.body).then((result) => {

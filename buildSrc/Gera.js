@@ -1,13 +1,20 @@
 const URL = process.env.ENV_URL
 const request = require('request')
 
+function RequestHeaders(watsonData) {
+    return {
+        "authorization": `Bearer ${watsonData.context.userPayload.token.value}`,
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    }
+}
+
 const getToken = (user) => {
     console.log('Get token method invoked..')
     return new Promise((resolve, reject) => {
-
         const formData = {
-            client_id: 'HtmlCart',
-            client_secret: '8SHEQN9BLVPFQXEIYJZ5GH1MZXYDO2BKND8QZILA',
+            client_id: process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
             username: user.username.toString(),
             password: user.password.toString(),
             grant_type: 'password'
@@ -20,16 +27,21 @@ const getToken = (user) => {
             },
             form: formData
         }
-
-        console.log(JSON.stringify(options, null, 2))
-
         request(options, (error, response, body) => {
-            console.log(body)
             try {
                 body = JSON.parse(body)
-
                 if (!error && response.statusCode === 200) {
-                    resolve({ access_token: body.access_token, user_id: body.user_id })
+                    let payload = {
+                        user: {
+                            id: body.user_id,
+                            username: body.user_name
+                        },
+                        token: {
+                            value: body.access_token,
+                            valid: true
+                        }
+                    }
+                    resolve(payload)
                 } else {
                     reject(body)
                 }
@@ -38,6 +50,266 @@ const getToken = (user) => {
                 reject({ error: "EXPIRED_SESSION" })
             }
         })
+
+    })
+}
+
+const checkUserInformations = (watsonData) => {
+    console.log('Check User informations')
+    return new Promise((resolve, reject) => {
+        peopleAPI(watsonData)
+            .then((peopleResult) => {
+                serviceInfoAPI(watsonData)
+                    .then(serviceInfoResult => {
+                        let userPayload = watsonData.context.userPayload
+                        userPayload.user.peopleInfo = peopleResult
+                        userPayload.user.serviceInfo = serviceInfoResult
+                        resolve({ userPayload })
+                    }).catch((err) => {
+                        console.log(err)
+                    })
+            }).catch((err) => {
+                console.log(err)
+            })
+    })
+}
+
+const peopleAPI = (watsonData) => {
+    console.log('People API method invoked')
+    return new Promise((resolve, reject) => {
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/people?code=${watsonData.context.userPayload.user.id}`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                resolve(body[0] || null)
+            } else {
+                console.log('Error on peopleAPI')
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const serviceInfoAPI = (watsonData) => {
+    console.log('ServiceInfo API method invoked')
+    return new Promise((resolve, reject) => {
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/serviceInfo`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            console.log(body)
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                resolve(body)
+            } else {
+                console.log('Error on service info API')
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const checkPendingOrders = (watsonData) => {
+    console.log('Check pending orders method invoked')
+    return new Promise((resolve, reject) => {
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/pendingOrders?collectionMode=${process.env.COLLECTION_MODE}`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error) {
+                body = JSON.parse(body)
+                if (response.statusCode === 404) {
+                    resolve({
+                        pendingOrders: false
+                    })
+                } else {
+                    console.log('VERIFICAR O METODO CHECK PENDING ORDERS')
+                }
+
+            } else {
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+
+
+    })
+}
+
+const getBusinessModels = (watsonData) => {
+    console.log('Get business models method invoked')
+    return new Promise((resolve, reject) => {
+        let functionCodes = `functionCode%5B%5D=${process.env.BM_FUNCTION_CODES.split(',').join('&functionCode%5B%5D=')}`
+        let associationAccountTypes = `associationAccountType%5B%5D=${process.env.ASSOCIATION_ACCOUNT_TYPES.split(',').join('&associationAccountType%5B%5D=')}`
+        let queryParams = `orderingSystemCode=${process.env.ORDERING_SYSTEM_CODE}&${functionCodes}&applicationCode=${process.env.APPLICATION_CODE}&momentControlCenter=${process.env.MOMENT_CONTROL_CENTER}&${associationAccountTypes}&businessModelCode=`
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/businessModels?${queryParams}`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                let userPayload = watsonData.context.userPayload
+                userPayload.businessModels = body || null
+                resolve({ userPayload })
+            } else {
+                console.log('Error in getting business models')
+                reject({ err: body })
+            }
+        })
+    })
+}
+
+const selectBusinessModel = (watsonData) => {
+    console.log('Select Business Model method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const businessCode = watsonData.output.businessCode
+        const businessModel = userPayload.businessModels.filter(bModel => {
+            return bModel.code == businessCode
+        })[0] || null
+        delete userPayload.businessModels
+        userPayload.businessModel = businessModel
+        if (businessModel)
+            resolve({ userPayload })
+        else
+            reject()
+
+    })
+}
+
+const getBusinessModelDeliveryMode = (watsonData) => {
+    return new Promise((resolve, reject) => {
+        selectBusinessModel(watsonData).then((result) => {
+            watsonData.context = Object.assign({}, watsonData.context, result)
+            getSellerData(watsonData).then((sellerDataResult) => {
+                let userPayload = watsonData.context.userPayload
+                delete userPayload.user.peopleInfo
+                userPayload.user.sellerInfo = sellerDataResult
+                watsonData.context = Object.assign({}, watsonData.context, { userPayload })
+                businessModelDeliveryMode(watsonData).then((deliveryModeResults) => {
+                    let userPayload = watsonData.context.userPayload
+                    userPayload.deliveryModes = deliveryModeResults
+                    resolve({ userPayload })
+                }).catch((err) => {
+                    console.log('Error on getting delivery modes')
+                    reject(err)
+                })
+            }).catch((err) => {
+                console.log('Error on getting seller data')
+                reject(err)
+            })
+        }).catch((err) => {
+            console.log('Error on selecting business model')
+            reject(err)
+        })
+    })
+}
+
+const businessModelDeliveryMode = (watsonData) => {
+    console.log('Business model delivery mode method invoked')
+    return new Promise((resolve, reject) => {
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/businessModels/${watsonData.context.userPayload.businessModel.code}/deliveryMode`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                body = body.reduce((acc, curr, index) => {
+                    curr.code = index
+                    acc.push(curr)
+                    return acc
+                }, [])
+                resolve(body)
+            } else {
+                console.log('Error in getting business model delivery mode')
+                reject({ err: body })
+            }
+        })
+    })
+}
+
+const getSellerData = (watsonData) => {
+    console.log('Get seller data method invoked')
+    return new Promise((resolve, reject) => {
+        const includeOptions = `includeOptions%5B%5D=${process.env.SELLER_INCLUDE_OPTIONS.split(',').join('&includeOptions%5B%5D=')}`
+        const functionCode = watsonData.context.userPayload.businessModel.function.code || 1
+        const queryOarams = `${includeOptions}&businessModelCode=${watsonData.context.userPayload.businessModel.code}&functionCode=${functionCode}`
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}?${queryOarams}`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                resolve(body[0] || null)
+            } else {
+                console.log('Error in getting seller data')
+                reject({ err: body })
+            }
+        })
+    })
+}
+
+const getStarterKit = (watsonData) => {
+    console.log('Starter kit method invoked')
+    return new Promise((resolve, reject) => {
+        selectBMDeliveryMode(watsonData).then((result) => {
+            watsonData.context = Object.assign({}, watsonData.context, result)
+            let userPayload = watsonData.context.userPayload
+            const options = {
+                method: 'GET',
+                url: `${URL}/api/sellers/${userPayload.user.id}/itemsToChoose?id=${userPayload.user.id}&businessModelCode=${userPayload.businessModel.code}&originSystem=${process.env.ORIGIN_SYSTEM}`,
+                headers: new RequestHeaders(watsonData)
+            }
+            request(options, (error, response, body) => {
+                body = JSON.parse(body)
+                if (!error && response.statusCode === 200) {
+                    userPayload.starterKits = body
+                    resolve({ userPayload })
+                } else {
+                    console.log('Error on getting starter kit')
+                    reject({ err: body, statusCode: response.statusCode })
+                }
+            })
+        })
+    })
+}
+
+const selectBMDeliveryMode = (watsonData) => {
+    console.log('Select Business Model Delivery Mode')
+    return new Promise((resolve, reject) => {
+        const deliveryCode = watsonData.output.deliveryCode
+        let userPayload = watsonData.context.userPayload
+
+        const deliveryMode = userPayload.deliveryModes.filter((item) => {
+            return item.code == deliveryCode
+        })[0] || null
+        delete userPayload.deliveryModes
+
+        userPayload.businessModel.deliveryMode = deliveryMode
+
+        if (deliveryMode)
+            resolve({ userPayload })
+        else {
+            console.log('Error on selecting Business model delivery mode')
+            reject()
+        }
 
     })
 }
@@ -405,78 +677,6 @@ const createNewOrder = (watsonData) => {
                     })
                 })
             })
-        })
-    })
-}
-
-const getBusinessModels = (watsonData) => {
-    console.log('Get business models method invoked..')
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/sellers/${watsonData.context.user.id}/businessModels?orderingSystemCode=3&functionCode%5B%5D=1&functionCode%5B%5D=2&functionCode%5B%5D=9&applicationCode=2&momentControlCenter=1&associationAccountType%5B%5D=2&associationAccountType%5B%5D=3&businessModelCode=`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve(body[0])
-            } else {
-                console.log('Error in getting business models')
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const getBusinessModelDeliveryMode = (watsonData) => {
-    console.log('Get business model delivery mode method invoked..')
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/sellers/${watsonData.context.user.id}/businessModels/${watsonData.context.user.businessModel.code}/deliveryMode`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve(body[0])
-            } else {
-                console.log('Error in getting business model delivery mode')
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const getSellerData = (watsonData) => {
-    console.log('Get seller data method invoked..')
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/sellers/${watsonData.context.user.id}?businessModelCode=${watsonData.context.user.businessModel.code}`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve(body)
-            } else {
-                console.log('Error in getting seller data')
-                reject({ err: body })
-            }
         })
     })
 }
@@ -1014,6 +1214,11 @@ const closeCart = (watsonData) => {
 }
 
 module.exports = {
+    checkUserInformations,
+    checkPendingOrders,
+    getBusinessModels,
+    getBusinessModelDeliveryMode,
+    getStarterKit,
     checkUserOrders,
     checkStock,
     getProductToAdd,

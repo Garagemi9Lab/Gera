@@ -1,6 +1,8 @@
 var context = {}
 var promotionLoaded = false
+var waitForUserInput = false
 var loggedUser = getSession('user')
+
 function userMessage(message) {
     console.log('/message invoked..')
     let params = {
@@ -11,71 +13,42 @@ function userMessage(message) {
         loggedUser
     };
     showTyping()
+
     xhrPost('/message', params, function (data) {
         removeTyping()
         console.log(JSON.stringify(data, null, 2))
-        if (!promotionLoaded && data.context.token) {
+        if (!promotionLoaded && data.context.userPayload.token && data.context.userPayload.order) {
             getPromotions(data);
             promotionLoaded = true
         }
-
-        if (data.output && data.output.action) {
-            switch (data.output.action) {
-                case "show_order":
-                    displayUserOrder(data)
-                    break;
-                case "show_product":
-                    displayFoundProduct(data)
-                    break;
-                case "ask_product_quantity":
-                    displayFoundProduct(data)
-                    break;
-                case "show_substitute_products":
-                    displayProductSubstitutions(data)
-                    break;
-                case "show_promotions":
-                    displayPromotions(data)
-                    break;
-                case "show_gifts":
-                    displayGifts(data)
-                    break;
-                case "show_suggestions_products":
-                    displaySuggestedProducts(data)
-                    break;
-                case "show_rewards_to_choose":
-                    displayRewardsToChoose(data)
-                    break;
-                case "show_addresses":
-                    displayUserAddresses(data)
-                    break;
-                case "show_delivery_options":
-                    displayDeliveryOptions(data)
-                    break;
-                case "show_payment_plan":
-                    displayPaymentPlans(data)
-                    break;
-                case "show_installments":
-                    displayInstallments(data)
-                    break;
-                default:
-                    displayMessages(data.output.text)
-                    break;
-            }
-        } else {
-            displayMessages(data.output.text)
-        }
-
-        if (data.output && data.output.quick_replies) {
-            displayQuickReplies(data)
-        }
-
+        displayMessages(data.output)
         context = data.context;
+
+        if (data.output.action && data.output.action == 'waitForUserInput') {
+            waitForUser()
+        }
+
     }, function (err) {
         removeTyping()
         displayMessage('Um erro ocorreu, tente mais tarde', 'watson');
+        console.log(err)
     });
 }
 
+function waitForUser() {
+    if (!waitForUserInput) {
+        var chat_footer = document.getElementById('chat_footer')
+        var div_block = document.createElement('div')
+        div_block.setAttribute('class', 'block_div')
+        div_block.onclick = skipKitInputAlert
+        div_block.setAttribute('id', 'block_div')
+        chat_footer.append(div_block)
+    }
+}
+
+function skipKitInputAlert() {
+    alert('Favor informe os dados necessarios.')
+}
 
 function sendToBot(event, inputBox) {
     if (event.keyCode === 13 || event.type === 'click') {
@@ -90,193 +63,162 @@ function sendToBot(event, inputBox) {
     }
 }
 
-function displayMessages(texts) {
+function displayMessages(output) {
+    let texts = output.text
     for (let text in texts) {
         displayMessage(texts[text], 'watson');
     }
+    if (output && output.quick_replies) {
+        displayQuickReplies(output.quick_replies)
+    }
 }
 
-function displayMessage(message, user) {
+function displayMessage(message, user, type) {
     var chatBox = document.getElementById('chatlogs')
-    var bubble = createBubble(message, user)
+    var bubble = new Bubble(message, user, type)
     chatBox.appendChild(bubble)
-
     chatBox.scrollTop = chatBox.scrollHeight
-
 }
 
-function createBubble(message, user) {
+function Bubble(message, user, type) {
     let userClass = (user == 'watson') ? 'bot' : 'self'
     let userImg = (user === 'watson') ? 'img/bots.png' : 'img/user.svg'
     var bubble = document.createElement('div')
     bubble.setAttribute('class', 'segments')
-    bubble.innerHTML = '<dív class="chat top ' + userClass + '">' +
-        '<div class="out">' +
-        '<div class="user-photo">' +
-        '<img  src="' + userImg + '" alt="img"/>' +
-        '</div>' +
-        '<div>' +
-        '<div class="time">' +
-        new Date().toLocaleTimeString().substr(0, 5) +
-        '</div>' +
-        '</div>' +
-        '</div>' +
-        '<div class="chat-message">' +
-        message
-    '</div>' +
-        '</div>'
+    var div_top = document.createElement('div')
+    div_top.setAttribute('class', 'chat top ' + userClass)
+    var div_out = document.createElement('div')
+    div_out.setAttribute('class', 'out')
+    var div_photo = document.createElement('div')
+    div_photo.setAttribute('class', 'user-photo')
+    var img = document.createElement('img')
+    img.setAttribute('src', userImg)
+    img.setAttribute('alt', 'img')
+    div_photo.append(img)
+    div_out.append(div_photo)
+    var div_time = document.createElement('div')
+    div_time.setAttribute('class', 'time')
+    div_time.innerHTML = new Date().toLocaleTimeString().substr(0, 5)
+    div_out.append(div_time)
+    var div_chat = document.createElement('div')
+    div_chat.setAttribute('class', 'chat-message')
+    if (!type || type === 'typing')
+        div_chat.innerHTML = message
+    else
+        div_chat.append(message)
+    if (type === 'quick_reply') {
+        bubble.setAttribute('class', 'segments quick_reply_bubble')
+    }
+
+    if (type === 'typing') {
+        bubble.setAttribute('class', 'segments typing_bubble')
+    }
+    div_top.append(div_out)
+    div_top.append(div_chat)
+
+    bubble.append(div_top)
     return bubble
 }
 
-function displayFoundProduct(watsonData) {
-    displayMessages(watsonData.output.text, 'watson')
-    let foundStock = watsonData.context.foundStock
-    let message = `${foundStock.productName}<br>
-                    Código: ${foundStock.productCode}<br>`
-    displayMessage(message, 'watson')
-}
-
-function displayUserOrder(watsonData) {
-    displayMessages(watsonData.output.text, 'watson')
-    let order = watsonData.context.order
-    let message = `Pedido ${order.number}<br><br>`;
-    order.items.forEach((item) => {
-        message += `Cód: ${item.productCode}<br>
-                    Nome: ${item.productName}<br>
-                    Qtd: ${item.quantity}<br>
-                    Valor: ${item.unitMarketValue}<br><hr>
-                    `
-    })
-    if (order.items.length > 0) {
-        message += 'Total: ' + order.businessInformation.marketValue + '<br>'
-        displayMessage(message, 'watson')
-    }
-}
-
-function displayQuickReplies(watsonData) {
-    let quick_replies = watsonData.output.quick_replies
-    let buttons = []
-    quick_replies.forEach((quick_reply) => {
-        if (quick_reply.type == 'text') displayMessage(quick_reply.value, 'watson')
-        else if (quick_reply.type == 'button') buttons.push('<button class="quick_reply_btn" >' + quick_reply.value + '</button>')
-    })
-
-    if (buttons.length > 0) {
-        let message = '<div class="quick_replies_div">'
-        message += buttons.join('')
-        message += '</div>'
-        displayMessage(message, 'watson')
+function displayQuickReplies(quick_replies) {
+    if (quick_replies.length > 0) {
+        let div_quick_replies = document.createElement('div')
+        div_quick_replies.setAttribute('class', 'quick_replies_div')
+        quick_replies.forEach((quick_reply) => {
+            div_quick_replies.append(new QuickReplyElement(quick_reply))
+        })
+        displayMessage(div_quick_replies, 'watson', 'quick_reply')
         addClickListenerEvent('quick_reply_btn')
     }
 }
 
-function displaySuggestedProducts(watsonData) {
-    if (watsonData.output.text.length > 0) displayMessages(watsonData.output.text, 'watson')
-    const products = watsonData.context.suggestionsProducts[0].purchaseSuggestionDetails
-    let message = ''
-    products.forEach((product) => {
-        message += 'Nome: ' + product.productName + '<br>Cód: ' + product.productCode + '<br>Msg: ' + product.collectionMessage + '<br>Qtd sugerida: ' + product.suggestedQuantity + '<br>Pontos: ' + product.unitPointsQuantity + '<br>Valor: ' + product.unitValue + '<br><hr>'
-    })
+function QuickReplyElement(quick_reply) {
+    switch (quick_reply.type) {
+        case 'button':
+            let button = document.createElement('button')
+            button.setAttribute('class', 'quick_reply_btn')
+            button.setAttribute('hidden_value', quick_reply.payload.value)
+            button.innerHTML = quick_reply.title
+            return button
+        case 'checklists':
+            let lists_div = document.createElement('div')
+            lists_div.setAttribute('class', 'quick_reply_checklists_div')
+            quick_reply.payload.lists.forEach(list => {
+                let div = document.createElement('div')
+                div.setAttribute('class', 'quick_reply_checklist_div')
+                let title = document.createElement('div')
+                title.setAttribute('class', 'quick_reply_title')
+                title.innerHTML = list.title
+                div.append(title)
 
-    displayMessage(message, 'watson')
-}
+                let products_div = document.createElement('div')
+                products_div.setAttribute('class', 'quick_reply_checklist_products')
 
-function displayGifts(watsonData) {
-    if (watsonData.output.text.length > 0) displayMessages(watsonData.output.text, 'watson')
-    const gifts = watsonData.context.gifts
-    let message = ''
-    gifts.forEach((gift) => {
-        message += gift.title + '<br>' + gift.description + '<br>'
-        if (gift.giftType == 'discount') message += 'Desconto: ' + Math.ceil(gift.discount) + '<br>'
-        else if (gift.giftType == 'partialPrice') message += 'Falta(m) R$ ' + gift.missingValue + ' Reais do pedido<br>'
-        message += '<hr>'
-    })
-
-    displayMessage(message, 'watson')
-}
-
-function displayPromotions(watsonData) {
-    const promotions = watsonData.context.promotions
-    let message = ''
-    if (promotions.length > 1) displayMessages(watsonData.output.plural_msg)
-    else displayMessages(watsonData.output.singular_msg)
-
-    for (let i in promotions) {
-        message += 'titulo: ' + promotions[i].title + '<br>Descrição:' + promotions[i].description + '<br><hr>'
+                list.payload.listProducts.forEach(product => {
+                    let div = document.createElement('div')
+                    div.setAttribute('class', 'quick_reply_checklist_product')
+                    let input = document.createElement('input')
+                    input.setAttribute('type', 'checkbox')
+                    input.setAttribute('id', product.code)
+                    input.setAttribute('hidden_value', list.payload.listCode + '-' + product.code)
+                    let label = document.createElement('label')
+                    label.setAttribute('for', product.code)
+                    label.innerHTML = product.code + ' - ' + product.name
+                    div.append(input)
+                    div.append(label)
+                    products_div.append(div)
+                })
+                div.append(products_div)
+                lists_div.append(div)
+            })
+            let button_div = document.createElement('div')
+            button_div.setAttribute('class', 'quick_reply_checklist_btn_div')
+            let qr_button = document.createElement('button')
+            qr_button.onclick = quickReplyKitFinish
+            qr_button.innerHTML = 'Finalizar'
+            button_div.append(qr_button)
+            lists_div.append(button_div)
+            return lists_div
     }
-    displayMessage(message, 'watson')
 }
 
-function displayUserAddresses(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const addresses = watsonData.context.addresses
-    let message = ''
-    addresses.forEach((address, index) => {
-        message += (index + 1) + ' - ' + address.formattedAddress + '<br><hr>'
-    })
-    displayMessage(message, 'watson')
-}
-
-function displayDeliveryOptions(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const deliveryOptions = watsonData.context.deliveryOptions
-    let message = ''
-    deliveryOptions.forEach((deliveryOption, index) => {
-        const value = deliveryOption.value > 0 ? deliveryOption.value : 'Gratis'
-        message += (index + 1) + ' - ' + deliveryOption.name + '<br>Valor: ' + value + '<br><hr>'
-    })
-    displayMessage(message, 'watson')
-}
-
-function displayPaymentPlans(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const paymentPlans = watsonData.context.paymentPlans
-    let message = ''
-    paymentPlans.forEach((plan, index) => {
-        if (plan.paymentMode.id == 1) {
-            message += (index + 1) + ' - ' + plan.paymentMode.description + ' : ' + plan.name + '<br><hr>'
+function quickReplyKitFinish() {
+    var kits_div = document.getElementsByClassName('quick_reply_checklist_products')
+    var selected_products = []
+    // for all browser
+    for (var i = 0; i < kits_div.length; i++) {
+        let products = kits_div[i].childNodes
+        let min_checked = false;
+        for (var j = 0; j < products.length; j++) {
+            let input = products[i].firstChild
+            if (input.checked) {
+                min_checked = true
+                var hidden_value = input.getAttribute('hidden_value')
+                selected_products.push({
+                    kitCode: parseInt(hidden_value.split('-')[0]),
+                    produceCode: parseInt(hidden_value.split('-')[1]),
+                })
+            }
         }
-    })
-    displayMessage(message, 'watson')
-}
+        if (!min_checked) {
+            alert('Favor selecione pelo menos um produto de cada KIT e clique em finalizar.')
+            return;
+        }
+    }
 
-function displayProductSubstitutions(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const substitutions = watsonData.context.substitutions
-    let message = ''
-    substitutions.forEach((item) => {
-        message += 'Nome: ' + item.productName + '<br>Cod: ' + item.productCode + '<br>Desc: ' + item.productDescription + '<br>Valor: ' + item.unityPrice + '<br><hr>'
-    })
-    displayMessage(message, 'watson')
+    console.log(JSON.stringify(selected_products, null, 2))
 
-}
 
-function displayRewardsToChoose(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const rewardsToChoosePromotions = watsonData.context.order.rewardsToChoosePromotions[0]
-    let message = ''
-    rewardsToChoosePromotions.productsToChoose.forEach((element) => {
-        message += 'Nome: ' + element.productName + '<br>Cod: ' + element.productCode + '<br>Desc: ' + element.productDescription + '<br><hr>'
-    })
-    displayMessage(message, 'watson')
-}
-
-function displayInstallments(watsonData) {
-    if (watsonData.output.text) displayMessages(watsonData.output.text, 'watson')
-    const installments = watsonData.context.installments
-    let message = ''
-    installments.forEach((element) => {
-        message += 'Parc.: ' + element.number + '<br>Valor: ' + element.value + '<br>Venc.: ' + element.dueDate.split('T')[0].split('-').reverse().join('/') + '<br><hr>'
-    })
-    displayMessage(message, 'watson')
 }
 
 function onQuickReplyClick(e) {
     // Remove quick replies bubble.
     let bubble = e.target.parentElement.parentElement.parentElement.parentElement
     let text = e.target.innerHTML
+    let value = e.target.getAttribute('hidden_value')
     bubble.parentElement.removeChild(bubble)
     displayMessage(text, 'user')
+    text = text + '<code>' + value
     userMessage(text)
 }
 
@@ -319,7 +261,7 @@ function getPromotions(watsonData) {
 function showTyping() {
     var chatBox = document.getElementById('chatlogs')
     let message = '<img src="/img/typing.gif" class="typing-gif" id="typing_img"/>'
-    var bubble = createBubble(message, 'watson')
+    var bubble = new Bubble(message, 'watson', 'typing')
     chatBox.appendChild(bubble)
     chatBox.scrollTop = chatBox.scrollHeight
 }
@@ -332,8 +274,5 @@ function removeTyping() {
         chatBox.removeChild(typingBubble)
     }
 }
-
-
-
 
 userMessage('');
