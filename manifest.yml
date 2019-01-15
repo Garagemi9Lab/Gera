@@ -1,8 +1,6 @@
----
 applications:
-- name: gerabot-demo
+- path: .
   memory: 256M
   instances: 1
-  disk_quota: 256M
-  domain: mybluemix.net
-  host: gerabot-demo
+  name: gera-demo-v2
+  disk_quota: 1024M
