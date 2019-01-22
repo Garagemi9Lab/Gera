@@ -3,7 +3,19 @@ var promotionLoaded = false
 var waitForUserInput = false
 var loggedUser = getSession('user')
 
-function userMessage(message) {
+function waitForUser() {
+    if (!waitForUserInput) {
+        var chat_footer = document.getElementById('chat_footer')
+        var div_block = document.createElement('div')
+        div_block.setAttribute('class', 'block_div')
+        div_block.onclick = skipKitInputAlert
+        div_block.setAttribute('id', 'block_div')
+        chat_footer.append(div_block)
+        waitForUserInput = true
+    }
+}
+
+function userMessage(message, action, data) {
     console.log('/message invoked..')
     let params = {
         input: {
@@ -12,6 +24,10 @@ function userMessage(message) {
         context: context,
         loggedUser
     };
+    if (action && data) {
+        params.input.data = data
+        params.input.action = action
+    }
     showTyping()
 
     xhrPost('/message', params, function (data) {
@@ -35,16 +51,7 @@ function userMessage(message) {
     });
 }
 
-function waitForUser() {
-    if (!waitForUserInput) {
-        var chat_footer = document.getElementById('chat_footer')
-        var div_block = document.createElement('div')
-        div_block.setAttribute('class', 'block_div')
-        div_block.onclick = skipKitInputAlert
-        div_block.setAttribute('id', 'block_div')
-        chat_footer.append(div_block)
-    }
-}
+
 
 function skipKitInputAlert() {
     alert('Favor informe os dados necessarios.')
@@ -134,92 +141,216 @@ function displayQuickReplies(quick_replies) {
 
 function QuickReplyElement(quick_reply) {
     switch (quick_reply.type) {
-        case 'button':
-            let button = document.createElement('button')
-            button.setAttribute('class', 'quick_reply_btn')
-            button.setAttribute('hidden_value', quick_reply.payload.value)
-            button.innerHTML = quick_reply.title
-            return button
         case 'checklists':
             let lists_div = document.createElement('div')
             lists_div.setAttribute('class', 'quick_reply_checklists_div')
             quick_reply.payload.lists.forEach(list => {
                 let div = document.createElement('div')
                 div.setAttribute('class', 'quick_reply_checklist_div')
-                let title = document.createElement('div')
-                title.setAttribute('class', 'quick_reply_title')
-                title.innerHTML = list.title
-                div.append(title)
 
-                let products_div = document.createElement('div')
-                products_div.setAttribute('class', 'quick_reply_checklist_products')
+                let checklist_header = document.createElement('div')
+                checklist_header.setAttribute('class', 'quick_reply_checklist_header')
+                if (list.checkable) {
+                    let header_input = document.createElement('input')
+                    header_input.setAttribute('type', 'checkbox')
+                    header_input.setAttribute('id', list.payload.listCode)
+                    header_input.setAttribute('hidden_value', list.payload.listCode)
+                    let header_label = document.createElement('label')
+                    header_label.setAttribute('for', list.payload.listCode)
+                    header_label.setAttribute('class', 'quick_reply_title')
+                    header_label.innerHTML = list.title
+                    checklist_header.append(header_input)
+                    checklist_header.append(header_label)
+                } else {
+                    let title = document.createElement('div')
+                    title.setAttribute('class', 'quick_reply_title')
+                    title.innerHTML = list.title
+                    checklist_header.append(title)
+                }
 
-                list.payload.listProducts.forEach(product => {
+                div.append(checklist_header)
+
+                let items_div = document.createElement('div')
+                items_div.setAttribute('class', 'quick_reply_checklist_items')
+
+                list.payload.listItems.forEach(item => {
                     let div = document.createElement('div')
-                    div.setAttribute('class', 'quick_reply_checklist_product')
-                    let input = document.createElement('input')
-                    input.setAttribute('type', 'checkbox')
-                    input.setAttribute('id', product.code)
-                    input.setAttribute('hidden_value', list.payload.listCode + '-' + product.code)
-                    let label = document.createElement('label')
-                    label.setAttribute('for', product.code)
-                    label.innerHTML = product.code + ' - ' + product.name
-                    div.append(input)
-                    div.append(label)
-                    products_div.append(div)
+                    div.setAttribute('class', 'quick_reply_checklist_item')
+                    if (item.checkable) {
+                        let input = document.createElement('input')
+                        input.setAttribute('type', 'checkbox')
+                        input.setAttribute('id', item.code)
+                        input.setAttribute('hidden_value', list.payload.listCode + '-' + item.code)
+                        let label = document.createElement('label')
+                        label.setAttribute('for', item.code)
+                        label.innerHTML = item.code + ' - ' + item.name
+                        div.append(input)
+                        div.append(label)
+                    } else {
+                        let item_title = document.createElement('div')
+                        item_title.setAttribute('class', 'quick_reply_item_title')
+                        item_title.innerHTML = item.code + ' - ' + item.name
+                        div.append(item_title)
+                    }
+                    items_div.append(div)
                 })
-                div.append(products_div)
+                div.append(items_div)
                 lists_div.append(div)
             })
             let button_div = document.createElement('div')
             button_div.setAttribute('class', 'quick_reply_checklist_btn_div')
             let qr_button = document.createElement('button')
-            qr_button.onclick = quickReplyKitFinish
+            qr_button.setAttribute('class', 'quick_reply_checklists_finish_btn')
+            qr_button.onclick = quickRepliesFinish
             qr_button.innerHTML = 'Finalizar'
             button_div.append(qr_button)
             lists_div.append(button_div)
             return lists_div
+        default:
+            let button = document.createElement('button')
+            button.setAttribute('class', 'quick_reply_btn')
+            button.setAttribute('quick_reply_type', quick_reply.type)
+            button.setAttribute('hidden_value', quick_reply.payload.value)
+            button.innerHTML = quick_reply.title
+            return button
     }
 }
 
-function quickReplyKitFinish() {
-    var kits_div = document.getElementsByClassName('quick_reply_checklist_products')
-    var selected_products = []
-    // for all browser
-    for (var i = 0; i < kits_div.length; i++) {
-        let products = kits_div[i].childNodes
+function quickRepliesFinish() {
+    var checklists_div = document.getElementsByClassName('quick_reply_checklist_div')
+    var selected_list = []
+    for (var i = 0; i < checklists_div.length; i++) {
         let min_checked = false;
-        for (var j = 0; j < products.length; j++) {
-            let input = products[i].firstChild
+        var hidden_value
+        var checklist = checklists_div[i]
+        var checklist_header_elements = checklist.firstChild.childNodes
+        var checklist_title = ''
+        if (checklist_header_elements.length > 1) {
+            let input = checklist_header_elements[0]
+            checklist_title = checklist_header_elements[1].innerHTML
             if (input.checked) {
                 min_checked = true
-                var hidden_value = input.getAttribute('hidden_value')
-                selected_products.push({
-                    kitCode: parseInt(hidden_value.split('-')[0]),
-                    produceCode: parseInt(hidden_value.split('-')[1]),
+                hidden_value = input.getAttribute('hidden_value')
+                selected_list.push({
+                    listCode: parseInt(hidden_value),
+                    listTitle: checklist_title
                 })
             }
+        } else {
+            checklist_title = checklist_header_elements[0].innerHTML
+            var items = checklist.lastChild.childNodes
+            for (var j = 0; j < items.length; j++) {
+                let input = items[i].firstChild
+                let name = items[i].lastChild.innerHTML
+                if (input.checked) {
+                    min_checked = true
+                    var hidden_value = input.getAttribute('hidden_value')
+                    selected_list.push({
+                        listCode: parseInt(hidden_value.split('-')[0]),
+                        itemCode: parseInt(hidden_value.split('-')[1]),
+                        itemName: name,
+                        listTitle: checklist_title
+                    })
+                }
+            }
         }
+
         if (!min_checked) {
-            alert('Favor selecione pelo menos um produto de cada KIT e clique em finalizar.')
+            alert('Favor selecione pelo menos um item e clique em finalizar.')
             return;
         }
     }
+    if (selected_list.length > 0) {
+        disableQuickReplyCheckLists()
+        showUserQuickReplyMessage(selected_list)
+        removeDisableBlock()
+    }
+}
 
-    console.log(JSON.stringify(selected_products, null, 2))
+function disableQuickReplyCheckLists() {
+    var lists_div = document.getElementsByClassName('quick_reply_checklist_header')
+    for (var i = 0; i < lists_div.length; i++) {
+        // let input = lists_div[i].childNodes[0]
+        // if (!input.disabled) input.disabled = true
+        for (var j = 0; j < items.length; j++) {
+            let input = items[i].firstChild
+            if (!input.disabled) input.disabled = true
+        }
+    }
 
+    let finishButtons = document.getElementsByClassName('quick_reply_checklists_finish_btn')
+    for (var k = 0; k < finishButtons.length; k++) {
+        if (!finishButtons[k].disabled) finishButtons[k].disabled = true
+    }
+}
 
+function showUserQuickReplyMessage(selected_list) {
+    let lists = selected_list.reduce((acc, curr) => {
+        if (!acc[curr.listCode]) {
+            acc[curr.listCode] = { title: curr.listTitle }
+        }
+        return acc
+    }, {})
+
+    let div = document.createElement('div')
+    div.setAttribute('class', 'checklists_reply_div')
+
+    Object.keys(lists).forEach((listCode) => {
+        let list_div = document.createElement('div')
+        list_div.setAttribute('class', 'checklist_reply_div')
+
+        let list = lists[listCode]
+        let list_title = document.createElement('div')
+        list_title.setAttribute('class', 'checklist_reply_title_div')
+        list_title.innerHTML = list.title
+        list_div.append(list_title)
+
+        let list_items = document.createElement('div')
+        list_items.setAttribute('class', 'checklist_reply_items')
+
+        list.items.forEach((item) => {
+            let item_div = document.createElement('div')
+            item_div.setAttribute('class', 'checklist_reply_item')
+            item_div.innerHTML = item.name
+            list_items.append(item_div)
+        })
+
+        list_div.append(list_items)
+
+        div.append(list_div)
+
+    })
+
+    displayMessage(div, 'user', 'htmlElement')
+    userMessage('', 'selectKit', selected_list)
+
+}
+
+function removeDisableBlock() {
+    var block_div = document.getElementById('block_div')
+    if (block_div) {
+        block_div.remove()
+        waitForUserInput = false
+    }
 }
 
 function onQuickReplyClick(e) {
     // Remove quick replies bubble.
+    if (waitForUserInput) removeDisableBlock()
+    console.log(e.target)
     let bubble = e.target.parentElement.parentElement.parentElement.parentElement
     let text = e.target.innerHTML
     let value = e.target.getAttribute('hidden_value')
+    let type = e.target.getAttribute('quick_reply_type')
     bubble.parentElement.removeChild(bubble)
     displayMessage(text, 'user')
-    text = text + '<code>' + value
-    userMessage(text)
+    // switch (type) {
+    // default:
+    // continue;
+    // }
+    // text = text + '<code>' + value
+    userMessage(value)
+
 }
 
 function addClickListenerEvent(className) {
@@ -231,10 +362,11 @@ function addClickListenerEvent(className) {
 
 function getPromotions(watsonData) {
     xhrPost('/api/getPromotions', watsonData, (result) => {
-        if (result.hasPromotions) {
+
+        if (result.input.hasPromotions) {
             let promotion_div = document.getElementById('promotions_div')
             let promotions = ''
-            result.promotions.forEach((promotion) => {
+            result.userPayload.promotions.forEach((promotion) => {
                 promotions += '<div class="d-flex linha-promocao">' +
                     '<div class="col-2 d-flex ico-promocao align-center justify-center" >' +
                     '<i class="material-icons">local_offer</i>' +

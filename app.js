@@ -2,13 +2,16 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var logger = require('morgan');
-
 var app = express();
 require('dotenv').load()
 
 var Bot = require('./buildSrc/Conversation/bot')
 var Gera = require('./buildSrc/Gera')
 
+var helpers = require('./buildSrc/helpers')
+
+var QuickReplies = helpers.QuickReplies
+var CustomMessage = helpers.CustomMessage
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -68,20 +71,29 @@ const sendToWatson = (params) => {
           case "check_user_informations":
             Gera.checkUserInformations(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
+              Gera.checkOpenOrders(watsonData).then((result) => {
+                watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+                sendToWatson({
+                  context: watsonData.context,
+                  input: result.input
+                }).then((data) => resolve(data))
+              }).catch(error => {
+                console.log('Error on checking user info')
+                console.log(error)
+              })
             }).catch(error => {
               console.log('Error on checking user info')
               console.log(error)
             })
             break;
 
-          case "check_pending_orders":
-            Gera.checkPendingOrders(watsonData).then((result) => {
+          case "check_open_orders":
+            Gera.checkOpenOrders(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              if (result.input) result.input.data = CustomMessage(result.userPayload.order, 'order')
               sendToWatson({
                 context: watsonData.context,
-                input: {
-                  pendingOrders: result.pendingOrders
-                }
+                input: result.input
               }).then((data) => resolve(data))
             }).catch(error => {
               console.log('Error on checking user info')
@@ -105,7 +117,6 @@ const sendToWatson = (params) => {
             })
             break;
 
-            
           case "select_business_model":
             Gera.getBusinessModelDeliveryMode(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
@@ -120,6 +131,19 @@ const sendToWatson = (params) => {
             break;
 
           case "select_BM_delivery_mode":
+            Gera.getCycles(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result)
+              sendToWatson({
+                context: watsonData.context,
+                input: {
+                  action: 'showCycles',
+                  quick_replies: new QuickReplies(result.userPayload.cycles, 'cycles')
+                }
+              }).then((data) => resolve(data))
+            })
+            break;
+
+          case 'select_cycle':
             Gera.getStarterKit(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
               sendToWatson({
@@ -131,256 +155,137 @@ const sendToWatson = (params) => {
               }).then((data) => resolve(data))
             })
             break;
-
-          case "check_orders":
-            Gera.checkUserOrders(watsonData).then((result) => {
+          case "select_kits":
+            Gera.selectKit(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
-            }).catch((error) => {
-              console.log('Error on checking orders')
-              console.log(error)
-            })
-            break;
-          case "get_stock":
-            Gera.checkStock(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then((data) => {
-                delete data.context.productCode
-                resolve(data)
+              Gera.createNewOrder(watsonData).then((result) => {
+                watsonData.context = Object.assign({}, watsonData.context, result)
+                sendToWatson({
+                  context: watsonData.context,
+                  input: {
+                    action: 'newOrder'
+                  }
+                }).then((data) => resolve(data))
               })
-            }).catch((error) => {
+            }).catch(() => {
+              console.log('Error on selecting kits')
+            })
+            break;
+
+          case 'get_stock':
+            Gera.checkStock(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then((data) => resolve(data))
+            }).catch(error => {
+              console.log('Error on checking product stock')
               console.log(error)
             })
             break;
+
           case "get_product_to_add":
             Gera.getProductToAdd(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then((data) => {
-                delete data.context.productCode
-                resolve(data)
-              })
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then((data) => resolve(data))
             })
             break;
+
+          case "check_product_replace":
+            Gera.checkProductReplacement(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              if (result.input && result.input.hasSubstitutes) result.input.data = CustomMessage(result.userPayload.substitutions, 'substitutions')
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then((data) => resolve(data))
+            })
+            break;
+
           case "add_product":
-            if (watsonData.context.orderDeleted && watsonData.context.orderDeleted == true) {
-              delete watsonData.context.orderDeleted
-              Gera.createNewOrder(watsonData).then((result) => {
-                watsonData.context.newOrder = true
-                watsonData.context.order = result
-                Gera.addProduct(watsonData).then((result) => {
-                  watsonData.context = Object.assign({}, watsonData.context, result)
-                  sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-                }).catch((err) => {
-                  console.log('An error occured on add product method. ')
-                  console.log(err)
-                })
-              })
-            } else {
-              Gera.addProduct(watsonData).then((result) => {
-                watsonData.context = Object.assign({}, watsonData.context, result)
-                sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-              }).catch((err) => {
-                console.log('An error occured on add product method. ')
-                console.log(err)
-              })
-            }
-            break;
-
-          case "check_order_state":
-            Gera.checkOrderState(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
+            Gera.addProduct(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            }).catch((err) => {
+              console.log('An error occured on add product method. ')
+              console.log(err)
             })
             break;
 
-          case "check_suggestions":
-            Gera.checkSuggestions(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
+          case "delete_order":
+            Gera.deleteOrder(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            }).catch((err) => {
+              console.log('Error on deleting the order')
+              console.log(err)
             })
             break;
 
-          case "check_promotions":
-            Gera.checkPromotions(watsonData).then((result) => {
-              delete watsonData.context.hasSuggestions
-              delete watsonData.context.suggestionsProducts
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
+          case "check_productCode":
+            Gera.checkProductCode(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
+
+          case "edit_product":
+            Gera.editProduct(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
+
+          case "check_productCode_remove":
+            Gera.checkProductCodeRemove(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
+
+          case "remove_product":
+            Gera.removeProduct(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
             })
             break;
 
           case "reserve_order":
             Gera.reserverOrder(watsonData).then((result) => {
-              delete watsonData.context.hasPromotions
-              delete watsonData.context.promotions
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "check_gifts":
-            Gera.checkGifts(watsonData).then((result) => {
-              delete watsonData.context.orderReserved
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "select_gift":
-            Gera.selectGift(watsonData).then((result) => {
-              delete watsonData.context.giftProductCode
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "check_addresses":
-            Gera.checkAddresses(watsonData).then((result) => {
-              delete watsonData.context.hasGifts
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break
-          case "select_address":
-            Gera.selectAddress(watsonData).then((result) => {
-              delete watsonData.context.addresses
-              delete watsonData.context.hasAddresses
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "check_delivery_options":
-            Gera.checkDeliveryOptions(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
             })
             break;
 
-          case "select_delivery_option":
-            Gera.selectDeliveryOption(watsonData).then((result) => {
-              delete watsonData.context.deliveryOptions
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-
-          case "check_payment_list":
-            Gera.checkPaymentList(watsonData).then((result) => {
-              delete watsonData.context.deliveryOptionSelected
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "select_payment_plan":
-            Gera.selectPaymentPlan(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "check_payment_installments":
-            Gera.checkInstallments(watsonData).then((result) => {
-              delete watsonData.context.paymentPLans
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "get_total":
-            Gera.getTotal(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "close_cart":
-            Gera.closeCart(watsonData).then((result) => {
-              delete watsonData.context.order
-              delete watsonData.context.hasOrders
-              delete watsonData.context.newOrder
-              delete watsonData.context.createNewOrder
-              delete watsonData.context.hasSuggestions
-              delete watsonData.context.suggestionsProducts
-              delete watsonData.context.hasPromotions
-              delete watsonData.context.promotions
-              delete watsonData.context.orderReserved
-              delete watsonData.context.hasGifts
-              delete watsonData.context.addresses
-              delete watsonData.context.hasAddresses
-              delete watsonData.context.deliveryOptions
-              delete watsonData.context.deliveryOptionSelected
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "delete_order":
-            Gera.deleteOrder(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              if (result.orderDeleted) {
-                delete watsonData.context.order
-                delete watsonData.context.hasOrders
-                delete watsonData.context.newOrder
-                delete watsonData.context.hasSuggestions
-                delete watsonData.context.suggestionsProducts
-                delete watsonData.context.hasPromotions
-                delete watsonData.context.promotions
-                delete watsonData.context.orderReserved
-                delete watsonData.context.hasGifts
-                delete watsonData.context.addresses
-                delete watsonData.context.hasAddresses
-                delete watsonData.context.deliveryOptions
-                delete watsonData.context.deliveryOptionSelected
-              }
-
-              Gera.checkUserOrders(watsonData).then((result) => {
-                watsonData.context = Object.assign({}, watsonData.context, result)
-                sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-              })
-
-
-            })
-            break;
-          case "check_productCode":
-            Gera.checkProductCode(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "check_productCode_remove":
-            Gera.checkProductCodeRemove(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "edit_product":
-            Gera.editProduct(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "remove_product":
-            Gera.removeProduct(watsonData).then((result) => {
-              delete watsonData.context.removeProductCode
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
-            })
-            break;
-          case "remove_product_added_context":
-            delete watsonData.context.productAdded
-            resolve(watsonData)
-            break;
-          case "show_substitute_products":
-            delete watsonData.context.productAdded
-            delete watsonData.context.hasSubstitutes
-            resolve(watsonData)
-            break;
-          case "remove_add_context":
-            delete watsonData.context.productAdded
-            delete watsonData.context.hasSubstitutes
-            resolve(watsonData)
-            break;
-
-          case "reset_quantity":
-            delete watsonData.context.quantityNumber
-            resolve(watsonData)
-            break;
           default:
             resolve(watsonData)
             break;
+
         }
       } else {
         resolve(watsonData)
@@ -392,62 +297,6 @@ const sendToWatson = (params) => {
   })
 }
 
-
-function QuickReplies(payload, action) {
-  let quick_replies = []
-  switch (action) {
-    case 'businessModels':
-      quick_replies = payload.reduce((acc, curr) => {
-        acc.push({
-          title: curr.name,
-          type: 'button',
-          payload: {
-            value: curr.code
-          }
-        })
-        return acc
-      }, [])
-      break;
-
-    case 'deliveryModes':
-      quick_replies = payload.reduce((acc, curr) => {
-        acc.push({
-          title: curr.address,
-          type: 'button',
-          payload: {
-            value: curr.code
-          }
-        })
-        return acc
-      }, [])
-      break;
-
-    case "starterKits":
-
-      quick_replies = [
-        {
-          type: 'checklists',
-          payload: {
-            lists: payload.reduce((acc, curr) => {
-              acc.push({
-                title: `${curr.sourceInfo.description}`,
-                type: 'checklist',
-                payload: {
-                  value: curr.code,
-                  listCode: curr.code,
-                  listProducts: curr.products.map(product => ({ code: product.code, name: product.name }))
-                }
-              })
-              return acc
-            }, [])
-          }
-        }
-      ]
-      break;
-  }
-
-  return quick_replies
-}
 
 
 app.post('/api/getPromotions', (req, res) => {

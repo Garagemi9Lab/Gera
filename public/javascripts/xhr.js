@@ -48,7 +48,7 @@ const xhrPost = (url, data, callback, errback) => {
             }
         }
     };
-    xhr.timeout = 30000;
+    xhr.timeout = 100000;
     xhr.send(JSON.stringify(data));
 }
 

@@ -9,6 +9,14 @@ function RequestHeaders(watsonData) {
     }
 }
 
+function expiredToken(watsonData) {
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        userPayload.token.valid = false
+        resolve({ userPayload })
+    })
+}
+
 const getToken = (user) => {
     console.log('Get token method invoked..')
     return new Promise((resolve, reject) => {
@@ -86,6 +94,9 @@ const peopleAPI = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body[0] || null)
+            } else if (response, statusCode === 401) {
+                console.log('Expired token')
+                // expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error on peopleAPI')
                 reject({ err: body, statusCode: response.statusCode })
@@ -103,7 +114,6 @@ const serviceInfoAPI = (watsonData) => {
             headers: new RequestHeaders(watsonData)
         }
         request(options, (error, response, body) => {
-            console.log(body)
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body)
@@ -115,33 +125,47 @@ const serviceInfoAPI = (watsonData) => {
     })
 }
 
-const checkPendingOrders = (watsonData) => {
-    console.log('Check pending orders method invoked')
+const checkOpenOrders = (watsonData) => {
+    console.log('Check open orders method invoked')
     return new Promise((resolve, reject) => {
 
+        const retrievedOrder = {
+            representativeCode: watsonData.context.userPayload.user.id,
+            collectionSystem: process.env.COLLECTION_SYSTEM,
+            collectionMode: process.env.COLLECTION_MODE,
+            originSystem: process.env.ORIGIN_SYSTEM
+        }
+
         const options = {
-            method: 'GET',
-            url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/pendingOrders?collectionMode=${process.env.COLLECTION_MODE}`,
-            headers: new RequestHeaders(watsonData)
+            method: 'POST',
+            url: `${URL}/api/orders/retrieved`,
+            headers: new RequestHeaders(watsonData),
+            body: JSON.stringify(retrievedOrder)
         }
 
         request(options, (error, response, body) => {
-            if (!error) {
+            let userPayload = watsonData.context.userPayload
+            if (!error && response.statusCode == 201) {
+                // Order Opened check if it has items or not. 
                 body = JSON.parse(body)
-                if (response.statusCode === 404) {
-                    resolve({
-                        pendingOrders: false
-                    })
+                userPayload.order = body
+                if (body.items.length > 0) {
+                    resolve({ input: { openOrder: true, hasItems: true }, userPayload })
                 } else {
-                    console.log('VERIFICAR O METODO CHECK PENDING ORDERS')
+                    resolve({ input: { openOrder: true, hasItems: false }, userPayload })
                 }
-
+            } else if (!error && response.statusCode === 204) {
+                // No Order opened
+                console.log('There is no order opened')
+                resolve({ input: { openOrder: false }, userPayload })
+            } else if (response.statusCode === 401) {
+                console.log('Expired token..: check it..')
             } else {
+                console.log('An error occured: ', response.statusCode)
+                console.log(body)
                 reject({ err: body, statusCode: response.statusCode })
             }
         })
-
-
     })
 }
 
@@ -257,36 +281,11 @@ const getSellerData = (watsonData) => {
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                resolve(body[0] || null)
+                resolve(body || null)
             } else {
                 console.log('Error in getting seller data')
                 reject({ err: body })
             }
-        })
-    })
-}
-
-const getStarterKit = (watsonData) => {
-    console.log('Starter kit method invoked')
-    return new Promise((resolve, reject) => {
-        selectBMDeliveryMode(watsonData).then((result) => {
-            watsonData.context = Object.assign({}, watsonData.context, result)
-            let userPayload = watsonData.context.userPayload
-            const options = {
-                method: 'GET',
-                url: `${URL}/api/sellers/${userPayload.user.id}/itemsToChoose?id=${userPayload.user.id}&businessModelCode=${userPayload.businessModel.code}&originSystem=${process.env.ORIGIN_SYSTEM}`,
-                headers: new RequestHeaders(watsonData)
-            }
-            request(options, (error, response, body) => {
-                body = JSON.parse(body)
-                if (!error && response.statusCode === 200) {
-                    userPayload.starterKits = body
-                    resolve({ userPayload })
-                } else {
-                    console.log('Error on getting starter kit')
-                    reject({ err: body, statusCode: response.statusCode })
-                }
-            })
         })
     })
 }
@@ -314,72 +313,199 @@ const selectBMDeliveryMode = (watsonData) => {
     })
 }
 
-const checkUserOrders = (watsonData) => {
-    console.log('Check user orders method invoked')
+const getCycles = (watsonData) => {
     return new Promise((resolve, reject) => {
-        // Fixed data to be changed to dinamic 
-        const retrievedOrder = {
-            representativeCode: watsonData.context.user.id,
-            collectionSystem: process.env.COLLECTION_SYSTEM,
-            collectionMode: process.env.COLLECTION_MODE,
-            originSystem: process.env.ORIGIN_SYSTEM
-        }
+        selectBMDeliveryMode(watsonData).then((result) => {
+            console.log('Get Cycles method invoked')
+            watsonData.context = Object.assign({}, watsonData.context, result)
+            let userPayload = watsonData.context.userPayload
+            const currentCycle = userPayload.user.sellerInfo.businessData.currentCycle
+            const nextCycle = userPayload.user.sellerInfo.businessData.nextCycle
+            let cycles = []
+            cycles.push({ number: currentCycle })
+            if (currentCycle != nextCycle) {
+                cycles.push({ number: nextCycle })
+                cycles = cycles.sort((a, b) => a.number - b.number)
+            }
 
+            userPayload.cycles = cycles
+
+            resolve({ userPayload })
+
+        }).catch((err) => {
+            console.log('Error on selecting Business Model Mode..')
+            console.log(err)
+        })
+    })
+}
+
+const selectCycle = (watsonData) => {
+    console.log('Select Cycle method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        console.log(JSON.stringify(watsonData, null, 2))
+        delete userPayload.cycles
+        delete userPayload.cycle
+        const selected_cycle = watsonData.output.selected_cycle || null
+        userPayload.user.selectedCycle = selected_cycle
+
+        resolve({ userPayload })
+
+    })
+}
+
+const getStarterKit = (watsonData) => {
+    console.log('Starter kit method invoked')
+    return new Promise((resolve, reject) => {
+
+        selectCycle(watsonData).then((result) => {
+            watsonData.context = Object.assign({}, watsonData.context, result)
+            let userPayload = watsonData.context.userPayload
+            const options = {
+                method: 'GET',
+                url: `${URL}/api/sellers/${userPayload.user.id}/itemsToChoose?id=${userPayload.user.id}&businessModelCode=${userPayload.businessModel.code}&originSystem=${process.env.ORIGIN_SYSTEM}`,
+                headers: new RequestHeaders(watsonData)
+            }
+            request(options, (error, response, body) => {
+                body = JSON.parse(body)
+                if (!error && response.statusCode === 200) {
+                    userPayload.starterKits = body
+                    resolve({ userPayload })
+                } else {
+                    console.log('Error on getting starter kit')
+                    reject({ err: body, statusCode: response.statusCode })
+                }
+            })
+        })
+    })
+}
+
+const selectKit = (watsonData) => {
+    console.log('Select KIT method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let itemsToChoose = watsonData.output.selectedKits.map(selectedKit => {
+            return {
+                productCode: selectedKit.itemCode,
+                itemToChooseCode: selectedKit.listCode
+            }
+        })
+        // let itemsToChoose = []
+        // watsonData.output.selectedKits.forEach((selectedKit) => {
+        // let kit = userPayload.starterKits.filter((starterKit) => starterKit.code == selectedKit.listCode)
+        // kit.products.forEach((product) => {
+        // itemsToChoose.push({
+        // productCode: product.code,
+        // itemToChooseCode: selectedKit.listCode
+        // })
+        // })
+        // })
+        delete userPayload.starterKits
+        userPayload.itemsToChoose = itemsToChoose
+        if (itemsToChoose) {
+            resolve({ userPayload })
+        } else {
+            reject()
+        }
+    })
+}
+
+const createNewOrder = (watsonData) => {
+    console.log('Creating a new Order method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let marketingCycle = parseInt(userPayload.user.selectedCycle)
+        const order = {
+            representativeCode: userPayload.user.id,
+            businessModelCode: userPayload.businessModel.code,
+            itemsToChoose: userPayload.itemsToChoose,
+            collectionMode: process.env.COLLECTION_MODE,
+            collectionSystem: process.env.COLLECTION_SYSTEM,
+            marketingCycle: null,
+            isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
+            originSystem: process.env.ORIGIN_SYSTEM,
+            startNewCycle: false
+        }
         const options = {
             method: 'POST',
-            url: `${URL}/api/orders/retrieved`,
-            headers: {
-                "authorization": `Bearer ${watsonData.context.token}`,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            },
-            body: JSON.stringify(retrievedOrder)
+            url: `${URL}/api/orders`,
+            headers: new RequestHeaders(watsonData),
+            body: JSON.stringify(order)
         }
 
+        console.log(JSON.stringify(options, null, 2))
+
         request(options, (error, response, body) => {
-            if (!error && response.statusCode == 201) {
-                body = JSON.parse(body)
-                if (body.items.length > 0)
-                    resolve({ hasOrders: true, order: body })
-                else resolve({ newOrder: true, order: body })
-            } else if (!error && response.statusCode === 204) {
-                createNewOrder(watsonData).then((result) => {
-                    resolve({ newOrder: true, order: result })
-                }).catch((error) => {
-                    console.log(error)
-                })
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 201) {
+                userPayload.order = body
+                console.log(`Order created successfully with number ${body.number}`)
+                resolve({ userPayload })
             } else {
-                reject({ err: body, statusCode: response.statusCode })
+                console.log('Error on creating order: ' + response.statusCode)
+                console.log(body)
+                reject({ err: body })
+            }
+        })
+    })
+}
+
+const checkPromotions = (watsonData) => {
+    console.log('Check promotions method inovked..')
+    return new Promise((resolve, reject) => {
+
+        const orderNumber = watsonData.context.userPayload.order.number
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/promotions`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            let userPayload = watsonData.context.userPayload
+            if (!error && response.statusCode === 200) {
+                userPayload.promotions = body
+                resolve({ input: { hasPromotions: true }, userPayload })
+            } else if (response.statusCode === 205) {
+                resolve({ input: { hasPromotions: false } })
+            } else if (response.statusCode === 401) {
+                userPayload.token.valid = false
+                resolve({ userPayload })
+            } else {
+                reject({ err: body })
             }
         })
     })
 }
 
 const checkStock = (watsonData) => {
-    console.log('Check stock method invoked..')
+    console.log('Check stock method invoked')
     return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+        const cycle = userPayload.order.businessInformation.marketingCycle
+        const sellerCode = userPayload.user.id
+        const functionCode = (b = userPayload.businessModel) ? (f = b.function.code) ? f : 1 : 1
+        const businessModelCode = userPayload.order.businessInformation.businessModelCode
+        const distributionCenterCode = userPayload.order.businessInformation.distributionCenterCode
+        const query = `cycle=${cycle}&sellerCode=${sellerCode}&functionCode=${functionCode}&businessModelCode=${businessModelCode}&distributionCenterCode=${distributionCenterCode}`
+
         const options = {
             method: 'GET',
-            url: `${URL}/api/Products/${watsonData.output.productCode}/stock?cycle=${watsonData.context.order.businessInformation.marketingCycle}&sellerCode=${watsonData.context.user.id}&functionCode=1&businessModelCode=${watsonData.context.order.businessInformation.businessModelCode}&distributionCenterCode=${watsonData.context.order.businessInformation.distributionCenterCode}`,
-            headers: {
-                "authorization": `Bearer ${watsonData.context.token}`,
-                "Content-Type": "application/json",
-                "Accept": "application/json"
-            }
+            url: `${URL}/api/Products/${watsonData.output.productCode}/stock?${query}`,
+            headers: new RequestHeaders(watsonData)
         }
-
         request(options, (error, response, body) => {
-            console.log('TYPEOF: ')
-            console.log(typeof body)
             body = JSON.parse(body)
+            console.log(JSON.stringify(body, null, 2))
             if (!error && response.statusCode === 200) {
-                resolve({ productFound: true, foundStock: body })
+                userPayload.foundProduct = body
+                resolve({ input: { productFound: true, product: body }, userPayload })
             } else if (!error && response.statusCode === 404) {
-                resolve({ productFound: false })
+                resolve({ input: { productFound: false }, userPayload })
             } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
+                // expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error on check Stock');
                 console.log(body)
@@ -390,28 +516,91 @@ const checkStock = (watsonData) => {
 }
 
 const getProductToAdd = (watsonData) => {
-    console.log('Get product to add method invoked..')
+    console.log('Get product to add method invoked')
     return new Promise((resolve, reject) => {
-        checkStock(watsonData).then((data) => {
-            if (data.productFound) {
-                resolve(data)
+        checkStock(watsonData).then((result) => {
+            resolve(result)
+        })
+    })
+}
+
+const checkProductReplacement = (watsonData) => {
+    console.log('Check Product Replacement method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const productCode = userPayload.foundProduct.productCode
+        checkOrderState(watsonData).then((result) => {
+            checkProductSubstitute(watsonData).then((result) => {
+                console.log(JSON.stringify(result, null, 2))
+                resolve(result)
+            })
+        })
+    })
+}
+
+const checkOrderState = (watsonData) => {
+    console.log('Check order state method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/state`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            console.log(JSON.stringify(body, null, 2))
+            if (!error && response.statusCode == 200) {
+                userPayload.orderState = body
+                resolve({ userPayload })
+            } else if (response.statusCode === 401) {
+                console.log('Expired token')
             } else {
-                resolve(data)
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+
+const checkProductSubstitute = (watsonData) => {
+    console.log('Check product substitute method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${userPayload.order.number}/replacementProducts/${userPayload.foundProduct.productCode}`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                userPayload.substitutions = body
+                resolve({ input: { hasSubstitutes: true }, userPayload })
+            } else if (response.statusCode === 404) {
+                console.log(JSON.stringify(body, null, 2))
+                resolve({ input: { hasSubstitutes: false } })
+            } else {
+                console.log('Error on checking product substitute')
             }
         })
     })
 }
 
 const addProduct = (watsonData) => {
-    console.log('Add product method invoked..')
+    console.log('Add product method invoked')
     return new Promise((resolve, reject) => {
-        console.log()
+        let userPayload = watsonData.context.userPayload
         const newItem = [
             {
-                "productCode": `${watsonData.context.foundStock.productCode}`,
+                "productCode": `${userPayload.foundProduct.productCode}`,
                 "productCodeSent": true,
-                "quantity": watsonData.output.quantity,
+                "productModelCodeSent": false,
+                "quantity": userPayload.productQuantity,
                 "quantitySent": true,
+                "sellerCodeSent": false,
                 "itemToChooseCode": 0,
                 "origin": 0,
                 "number": 0,
@@ -422,20 +611,20 @@ const addProduct = (watsonData) => {
         ]
         const options = {
             method: 'POST',
-            url: `${URL}/api/orders/${watsonData.context.order.number}/items`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            url: `${URL}/api/orders/${userPayload.order.number}/items`,
+            headers: new RequestHeaders(watsonData),
             body: JSON.stringify(newItem)
         }
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                resolve({ productAdded: true, order: body })
+                userPayload.order = body
+                delete userPayload.foundProduct
+                delete userPayload.productQuantity
+                resolve({ input: { productAdded: true }, userPayload })
             } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
+                console.log('Expired token')
+                // resolve({ expiredToken: true })
             } else {
                 console.log(JSON.stringify(body))
                 console.log('Error on adding product to cart')
@@ -446,53 +635,60 @@ const addProduct = (watsonData) => {
         })
     })
 }
-const checkProductCode = (watsonData) => {
-    console.log('Check product code method invoked..')
+
+const deleteOrder = (watsonData) => {
+    console.log('Delete order method invoked')
     return new Promise((resolve, reject) => {
-        const editProductCode = watsonData.context.editProductCode
-        const product = watsonData.context.order.items.filter((item) => {
-            console.log(item.productCode)
-            console.log(editProductCode)
+        let userPayload = watsonData.context.userPayload
+        const options = {
+            method: 'DELETE',
+            url: `${URL}/api/orders/${userPayload.order.number}`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                resolve({
+                    input: { orderDeleted: true },
+                    userPayload: {
+                        user: userPayload.user,
+                        token: userPayload.token
+                    }
+                })
+            } else {
+                console.log('Error on deleting the order')
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const checkProductCode = (watsonData) => {
+    console.log('Check product code method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const editProductCode = watsonData.output.editProductCode
+        const product = userPayload.order.items.filter((item) => {
             return item.productCode === editProductCode
         })[0] || null
 
         console.log(product)
 
         if (product) {
-            resolve({ valideProductCode: true })
+            userPayload.editProductCode = editProductCode
+            resolve({ input: { validProductCode: true }, userPayload })
         } else {
-            resolve({ valideProductCode: false })
-        }
-    })
-}
-
-
-
-const checkProductCodeRemove = (watsonData) => {
-    console.log('Check product code method invoked..')
-    return new Promise((resolve, reject) => {
-        const removeProductCode = watsonData.context.removeProductCode
-        const product = watsonData.context.order.items.filter((item) => {
-            return item.productCode === removeProductCode
-        })[0] || null
-
-        console.log(product)
-
-        if (product) {
-            resolve({ valideProductCode: true })
-        } else {
-            resolve({ valideProductCode: false })
+            resolve({ input: { validProductCode: false }, userPayload })
         }
     })
 }
 
 const editProduct = (watsonData) => {
-    console.log('Edit product method invoked..')
+    console.log('Edit product method invoked')
     return new Promise((resolve, reject) => {
-
-        const productCode = watsonData.output.productCode
-        const quantity = watsonData.output.quantity
-        const product = watsonData.context.order.items.filter((item) => {
+        let userPayload = watsonData.context.userPayload
+        const productCode = userPayload.editProductCode
+        const quantity = userPayload.editQuantity
+        const product = userPayload.order.items.filter((item) => {
             return item.productCode === productCode
         })[0] || null
 
@@ -512,18 +708,17 @@ const editProduct = (watsonData) => {
         ]
         const options = {
             method: 'POST',
-            url: `${URL}/api/orders/${watsonData.context.order.number}/items?eventChangeQuantity%5B%5D=replaceQuantity`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            url: `${URL}/api/orders/${userPayload.order.number}/items?eventChangeQuantity%5B%5D=replaceQuantity`,
+            headers: new RequestHeaders(watsonData),
             body: JSON.stringify(newItem)
         }
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                resolve({ productEdited: true, order: body })
+                userPayload.order = body
+                delete userPayload.editProductCode
+                delete userPayload.editQuantity
+                resolve({ input: { productEdited: true }, userPayload })
             } else if (response.statusCode === 401) {
                 resolve({ expiredToken: true })
             } else {
@@ -534,13 +729,33 @@ const editProduct = (watsonData) => {
     })
 }
 
+const checkProductCodeRemove = (watsonData) => {
+    console.log('Check product code remove method invoked')
+    return new Promise((resolve, reject) => {
+        const removeProductCode = watsonData.output.removeProductCode
+        let userPayload = watsonData.context.userPayload
+        const product = userPayload.order.items.filter((item) => {
+            return item.productCode === removeProductCode
+        })[0] || null
+        if (product) {
+            userPayload.removeProductCode = removeProductCode
+            resolve({ input: { validProductCode: true }, userPayload })
+        } else {
+            resolve({ input: { validProductCode: false }, userPayload })
+        }
+    })
+}
+
+
 const removeProduct = (watsonData) => {
-    console.log('Remove product method invoked..')
+    console.log('Remove product method invoked')
     return new Promise((resolve, reject) => {
 
-        const productCode = watsonData.output.productCode
+        let userPayload = watsonData.context.userPayload
 
-        const product = watsonData.context.order.items.filter((item) => {
+        const productCode = userPayload.removeProductCode
+
+        const product = userPayload.order.items.filter((item) => {
             return item.productCode === productCode
         })[0] || null
 
@@ -560,21 +775,19 @@ const removeProduct = (watsonData) => {
         ]
         const options = {
             method: 'POST',
-            url: `${URL}/api/orders/${watsonData.context.order.number}/items?eventChangeQuantity%5B%5D=replaceQuantity`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
+            url: `${URL}/api/orders/${userPayload.order.number}/items?eventChangeQuantity%5B%5D=replaceQuantity`,
+            headers: new RequestHeaders(watsonData),
             body: JSON.stringify(newItem)
         }
         request(options, (error, response, body) => {
             body = JSON.parse(body)
-            console.log(body)
             if (!error && response.statusCode === 200) {
-                resolve({ productRemoved: true, order: body })
+                userPayload.order = body
+                delete userPayload.removeProductCode
+                resolve({ input: { productRemoved: true }, userPayload })
             } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
+                console.log('Expired session')
+                // resolve({ expiredToken: true })
             } else {
                 console.log('Error on editing the product')
                 console.log(error)
@@ -583,239 +796,26 @@ const removeProduct = (watsonData) => {
     })
 }
 
-const checkProductReplacement = (watsonData) => {
-    console.log('Check product replacement method invoked..')
-    return new Promise((resolve, reject) => {
-        const productCode = watsonData.context.foundStock.productCode
-        checkOrderState(watsonData).then((orderState) => {
-            const cutItems = orderState.cutItems
-            if (cutItems.length > 0) {
-                const cutItem = cutItems.filter((item) => { return item.productCode === productCode && item.cutReason.id == 5 })[0] || null
-                if (cutItem) {
-                    checkProductSubstitute(watsonData).then((result) => {
-                        resolve(result)
-                    })
-                } else {
-                    console.log('CutItem is null after filtering it..')
-                }
-            } else {
-                console.log('Check Product replacement cut items length = 0')
-            }
-        })
-    })
-}
-
-const checkProductSubstitute = (watsonData) => {
-    console.log('Check product substitute method invoked..')
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${watsonData.context.order.number}/replacementProducts/${watsonData.context.foundStock.productCode}`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ hasSubstitutes: true, substitutions: body })
-            } else if (response.statusCode === 404) {
-                console.log(JSON.stringify(body, null, 2))
-                resolve({ hasSubstitutes: false })
-            } else {
-                console.log('Error on checking product substitute')
-            }
-        })
-    })
-}
-
-
-const createNewOrder = (watsonData) => {
-    console.log('Creating a new Order method invoked..')
-    return new Promise((resolve, reject) => {
-        getBusinessModels(watsonData).then((result) => {
-            console.log('got business models')
-            watsonData.context.user.businessModel = result
-            getBusinessModelDeliveryMode(watsonData).then((result) => {
-                console.log('Got business model delivery mode')
-                watsonData.context.user.businessModel.deliveryMode = result
-                getSellerData(watsonData).then((result) => {
-                    console.log('Got seller info')
-                    watsonData.context.user = Object.assign({}, watsonData.context.user, result)
-                    let user = watsonData.context.user
-                    // Create Order!
-                    const order = {
-                        "representativeCode": user.code,
-                        "businessModelCode": user.businessModel.code,
-                        "collectionMode": 5,
-                        "collectionSystem": 3,
-                        "isWithdrawalCenter": user.businessModel.deliveryMode.isWithdrawalCenter,
-                        "originSystem": 3
-                    }
-                    const options = {
-                        method: 'POST',
-                        url: `${URL}/api/orders`,
-                        headers: {
-                            'Authorization': `Bearer ${watsonData.context.token}`,
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(order)
-                    }
-                    request(options, (error, response, body) => {
-                        body = JSON.parse(body)
-                        if (!error && response.statusCode === 201) {
-                            console.log(`Order created successfully with number ${body.number}`)
-                            resolve(body)
-                        } else {
-                            console.log('Error on creating order')
-                            reject({ err: body })
-                        }
-                    })
-                })
-            })
-        })
-    })
-}
-
-const deleteOrder = (watsonData) => {
-    console.log('Delete order method invoked..')
-    return new Promise((resolve, reject) => {
-        const options = {
-            method: 'DELETE',
-            url: `${URL}/api/orders/${watsonData.context.order.number}`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            if (!error && response.statusCode === 200) {
-                resolve({ orderDeleted: true })
-            } else {
-                console.log('Error on deleting the order')
-                reject({ err: error })
-            }
-        })
-    })
-}
-
-const checkOrderState = (watsonData) => {
-    console.log('Check order state method invoked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/state`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            console.log(JSON.stringify(body, null, 2))
-            if (!error && response.statusCode == 200) {
-                resolve(body)
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
-            } else {
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const checkSuggestions = (watsonData) => {
-    console.log('Check suggestions method inovked..')
-    return new Promise((resolve, reject) => {
-        let orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/purchaseSuggestion?showModelsBeginColection=false&showModelsDuringColection=false&showModelsPromotionApplication=true`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application.json'
-            }
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                if (body.length == 0) {
-                    resolve({ hasSuggestions: false })
-                } else {
-                    resolve({ hasSuggestions: true, suggestionsProducts: body })
-                }
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
-            } else if (response.statusCode == 404) {
-                resolve({ hasSuggestions: false })
-            } else {
-                console.log(body)
-                reject({ err: body })
-            }
-        })
-
-    })
-}
-
-const checkPromotions = (watsonData) => {
-    console.log('Check promotions method inovked..')
-    return new Promise((resolve, reject) => {
-
-        const orderNumber = watsonData.context.order.number
-
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/promotions`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application.json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ hasPromotions: true, promotions: body })
-            } else if (response.statusCode === 205) {
-                resolve({ hasPromotions: false })
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
-            } else {
-                reject({ err: body })
-            }
-        })
-    })
-}
-
 const reserverOrder = (watsonData) => {
-    console.log('Reserve order method inovked..')
+    console.log('Reserve order method inovked')
     return new Promise((resolve, reject) => {
-        let orderNumber = watsonData.context.order.number
+        let userPayload = watsonData.context.userPayload
+        let orderNumber = userPayload.order.number
         const options = {
             method: 'POST',
             url: `${URL}/api/orders/${orderNumber}/reserve`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
+            headers: new RequestHeaders(watsonData)
         }
 
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                resolve({ orderReserved: true, order: body })
+                userPayload.order = body
+                resolve({ input: { orderReserved: true }, userPayload })
             } else if (!error && response.statusCode === 205) {
-                resolve({ orderReserved: true, order: body })
+                //TODO: verificar isso!
+                userPayload.order = body
+                resolve({ input: { orderReserved: true }, userPayload })
             } else if (response.statusCode === 401) {
                 resolve({ expiredToken: true })
             } else {
@@ -826,423 +826,26 @@ const reserverOrder = (watsonData) => {
     })
 }
 
-const checkGifts = (watsonData) => {
-    console.log('Check gifts method inovked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const giftsBody = {
-            "simulatedPromotion": false,
-            "applicationMomentId": 1
-        }
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/promotions`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(giftsBody)
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                let gifts = []
-                checkAcquiredPromotion(body, gifts).then((gifts) => {
-                    checkPartialPromotions(body, gifts).then((gifts) => {
-                        console.log(JSON.stringify(gifts, null, 2))
-                        let hasPromostionsToChoose = false
-                        if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
-                        if (gifts.length > 0) resolve({ hasGifts: true, gifts, hasPromostionsToChoose, order: body })
-                        else resolve({ hasGifts: false, hasPromostionsToChoose, order: body })
-                    })
-                })
-            } else {
-                reject({ err: body })
-            }
-        })
-
-    })
-}
-
-const checkAcquiredPromotion = (data, gifts) => {
-    console.log('Check acquired promotion method invoked..')
-    return new Promise((resolve, reject) => {
-        if (data.acquiredPromotion.length > 0) {
-            data.acquiredPromotion.forEach(element => {
-                let promotion = {
-                    title: element.title,
-                    description: element.description,
-                    giftType: 'reward'
-                }
-                if (element.rewards.length > 0) {
-                    if (element.rewards[0].type.id == 3) {
-                        promotion.giftType = 'discount'
-                        promotion.discount = element.rewards[0].discount
-                    }
-                }
-                gifts.push(promotion)
-            });
-        }
-        resolve(gifts)
-    })
-}
-
-const checkPartialPromotions = (data, gifts) => {
-    console.log('Check partial promotions method invoked..')
-    return new Promise((resolve, reject) => {
-        if (data.partialPromotions.length > 0) {
-            data.partialPromotions.forEach((element) => {
-                let promotion = {
-                    title: element.title,
-                    description: element.description,
-                    giftType: 'partial'
-                }
-                if (element.requirements.length > 0) {
-                    if (element.requirements[0].valueType.id == 3) {
-                        promotion.missingValue = element.requirements[0].missingValue
-                        promotion.giftType = 'partialPrice'
-                    }
-                }
-                gifts.push(promotion)
-            })
-        }
-        resolve(gifts)
-    })
-}
-
-const checkAddresses = (watsonData) => {
-    console.log('Check addresses method inovked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/deliveryAddresses`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode == 200) {
-                if (body.length > 0) {
-                    resolve({ hasAddresses: true, addresses: body })
-                } else {
-                    console.log('There is no addressess registered!')
-                }
-            } else {
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const selectAddress = (watsonData) => {
-    console.log('Select address method inovked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const selectedAddressIndex = watsonData.output.selectedAddress
-        const address = watsonData.context.addresses[selectedAddressIndex - 1]
-        const body = {
-            "peopleCode": address.people.code,
-            "addressTypeId": address.type.id,
-            "isWithdrawalCenter": false,
-            "isSupportCenter": false
-        }
-
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/deliveryAddresses`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(body)
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ addressSelected: true, order: body })
-            } else {
-                console.log('Error on selecting address!')
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const checkDeliveryOptions = (watsonData) => {
-    console.log('Check delivery options method inovked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/deliveryOptions`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ deliveryOptions: body })
-            } else {
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const selectDeliveryOption = (watsonData) => {
-    console.log('Select delivery option method inovked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const deliveryCode = watsonData.output.deliveryOptionIndex
-        const deliveryOption = {
-            deliveryOptionCode: watsonData.context.deliveryOptions[deliveryCode - 1].code
-        }
-
-        console.log('Delivery option code: ' + deliveryOption.deliveryOptionCode)
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/deliveryOptions`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(deliveryOption)
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ deliveryOptionSelected: true, order: body })
-            } else {
-                reject({ err: body })
-            }
-        })
-
-    })
-}
-
-const checkPaymentList = (watsonData) => {
-    console.log('Check payment list method inovked..')
-    return new Promise((resolve, reject) => {
-
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/paymentPlans`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ hasPaymentPlans: true, paymentPlans: body })
-            } else {
-                reject({ err: body })
-            }
-        })
-    })
-}
-
-const selectPaymentPlan = (watsonData) => {
-    console.log('Select payment plan method invoked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const planIndex = watsonData.output.planIndex
-        const paymentPlan = watsonData.context.paymentPlans[planIndex - 1] || null
-        if (planIndex > 0 && planIndex <= watsonData.context.paymentPlans.length && paymentPlan && paymentPlan.paymentMode.id == 1) {
-            const body = {
-                "paymentPlanCode": paymentPlan.code,
-                "paymentModeId": paymentPlan.paymentMode.id,
-                "installmentsQuantity": 1
-            }
-
-            const options = {
-                method: 'POST',
-                url: `${URL}/api/orders/${orderNumber}/paymentPlans`,
-                headers: {
-                    'Authorization': `Bearer ${watsonData.context.token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(body)
-            }
-            request(options, (error, response, body) => {
-                body = JSON.parse(body)
-                if (!error && response.statusCode === 200) {
-                    resolve({ planSelected: true, order: body })
-                } else {
-                    resolve({ planSelected: false })
-                }
-            })
-        } else {
-            resolve({ planSelected: false, indexPlanError: true })
-        }
-    })
-}
-
-const checkInstallments = (watsonData) => {
-    console.log('Check installments method invoked..')
-    return new Promise((resolve, reject) => {
-        const paymentPlan = watsonData.context.order.paymentPlans
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/installments?paymentPlanCode=${paymentPlan.code}&paymentModeId=${paymentPlan.paymentMode.id}&installmentsQuantity=1`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ installmentsChecked: true, installments: body })
-            } else {
-                resolve({ installmentsChecked: false })
-            }
-        })
-    })
-}
-
-const getTotal = (watsonData) => {
-    console.log('Get Cart TOTAL method invoked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${orderNumber}/totals?collectionSystem=3`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ gotCartTotal: true, cartTotal: body })
-            } else {
-                resolve({ gotCartTotal: false })
-            }
-        })
-    })
-}
-
-const selectGift = (watsonData) => {
-    console.log('Select gift method invoked..')
-    return new Promise((resolve, reject) => {
-        const orderNumber = watsonData.context.order.number
-        const giftNumber = watsonData.context.order.rewardsToChoosePromotions[0].giftNumber
-        const giftItemNumber = watsonData.context.order.rewardsToChoosePromotions[0].giftItemNumber
-        const selectedProduct = watsonData.output.productCode
-        const selectedQuantity = watsonData.output.quantity
-
-
-        let body = {
-            "discount": false,
-            "rewardOptionProduct": watsonData.context.order.rewardsToChoosePromotions[0].productsToChoose.map((product) => {
-                let quantity = 0
-                if (product.productCode === selectedProduct) quantity = selectedQuantity
-                return { productCode: product.productCode, quantity }
-            })
-        }
-
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/promotions/${watsonData.context.order.rewardsToChoosePromotions[0].code}/rewards/${giftNumber}/${giftItemNumber}`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(body)
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ selectedGift: true })
-            } else {
-                resolve({ selectedGift: false, giftErrorMessage: body[0].message })
-            }
-        })
-
-    })
-}
-
-const closeCart = (watsonData) => {
-    console.log('Close Cart method invoked..')
-    return new Promise((resolve, reject) => {
-
-        const orderNumber = watsonData.context.order.number
-
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/closed`,
-            headers: {
-                'Authorization': `Bearer ${watsonData.context.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        }
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                resolve({ orderClosed: true, order: body })
-            } else {
-                resolve({ orderClosed: false })
-            }
-        })
-    })
-}
 
 module.exports = {
+    getToken,
     checkUserInformations,
-    checkPendingOrders,
+    checkOpenOrders,
     getBusinessModels,
     getBusinessModelDeliveryMode,
+    getCycles,
     getStarterKit,
-    checkUserOrders,
+    selectKit,
+    createNewOrder,
+    checkPromotions,
     checkStock,
     getProductToAdd,
+    checkProductReplacement,
     addProduct,
-    checkOrderState,
-    checkSuggestions,
-    checkPromotions,
-    reserverOrder,
-    checkGifts,
-    checkAddresses,
-    selectAddress,
-    checkDeliveryOptions,
-    getToken,
-    selectDeliveryOption,
-    checkPaymentList,
     deleteOrder,
-    selectGift,
-    editProduct,
     checkProductCode,
-    selectPaymentPlan,
-    createNewOrder,
-    checkInstallments,
-    getTotal,
-    closeCart,
+    editProduct,
+    checkProductCodeRemove,
     removeProduct,
-    checkProductCodeRemove
+    reserverOrder
 }

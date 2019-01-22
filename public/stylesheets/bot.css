@@ -815,17 +815,17 @@ transition: 0.5s;
   font-weight: bold;
 }
 
-.quick_reply_checklist_products{
+.quick_reply_checklist_items{
   display: flex;
   flex-direction: column;
   margin-top: 5px;
   
 }
 
-.quick_reply_checklist_product{
+.quick_reply_checklist_item{
   display: flex;
 }
-.quick_reply_checklist_product label {
+.quick_reply_checklist_item label, .quick_reply_item_title {
     font-size: 8pt
 }
 
@@ -851,4 +851,24 @@ transition: 0.5s;
     color: #fff;
     border:none;
     border: 1px solid #fff;
+}
+z
+
+
+.checklists_reply_div, .checklist_reply_div{
+  display: flex;
+  flex-direction: column;
+}
+
+.checklist_reply_title_div{
+  font-weight: bold;
+}
+
+.checklist_reply_items{
+  display: flex;
+  flex-direction: column;
+}
+
+.checklist_reply_item{
+  font-size: 9pt;
 }
