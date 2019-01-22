@@ -270,6 +270,7 @@ function quickRepliesFinish() {
 function disableQuickReplyCheckLists() {
     var lists_div = document.getElementsByClassName('quick_reply_checklist_header')
     for (var i = 0; i < lists_div.length; i++) {
+        let items = lists_div[i].childNodes
         // let input = lists_div[i].childNodes[0]
         // if (!input.disabled) input.disabled = true
         for (var j = 0; j < items.length; j++) {
@@ -287,8 +288,9 @@ function disableQuickReplyCheckLists() {
 function showUserQuickReplyMessage(selected_list) {
     let lists = selected_list.reduce((acc, curr) => {
         if (!acc[curr.listCode]) {
-            acc[curr.listCode] = { title: curr.listTitle }
+            acc[curr.listCode] = { title: curr.listTitle, items: [] }
         }
+        acc[curr.listCode].items.push({ name: curr.itemName })
         return acc
     }, {})
 

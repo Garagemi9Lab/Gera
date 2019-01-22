@@ -421,7 +421,7 @@ const createNewOrder = (watsonData) => {
             itemsToChoose: userPayload.itemsToChoose,
             collectionMode: process.env.COLLECTION_MODE,
             collectionSystem: process.env.COLLECTION_SYSTEM,
-            marketingCycle: null,
+            marketingCycle: marketingCycle || null,
             isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
             originSystem: process.env.ORIGIN_SYSTEM,
             startNewCycle: false
@@ -432,9 +432,6 @@ const createNewOrder = (watsonData) => {
             headers: new RequestHeaders(watsonData),
             body: JSON.stringify(order)
         }
-
-        console.log(JSON.stringify(options, null, 2))
-
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 201) {
@@ -826,6 +823,41 @@ const reserverOrder = (watsonData) => {
     })
 }
 
+const checkSuggestions = (watsonData) => {
+    console.log('Check suggestions method inovked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let orderNumber = userPayload.order.number
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/purchaseSuggestion?showModelsBeginColection=false&showModelsDuringColection=false&showModelsPromotionApplication=true`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            console.log(JSON.stringify(body, null, 2))
+            if (!error && response.statusCode === 200) {
+                if (body.length == 0) {
+                    resolve({ input: { hasSuggestions: false }, userPayload })
+                } else {
+                    userPayload.suggestionsProducts = body
+                    resolve({ input: { hasSuggestions: true }, userPayload })
+                }
+            } else if (response.statusCode === 401) {
+                console.log('Expired Token')
+                // resolve({ expiredToken: true })
+            } else if (response.statusCode == 404) {
+                resolve({ input: { hasSuggestions: false }, userPayload })
+            } else {
+                console.log(body)
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+
+    })
+}
+
 
 module.exports = {
     getToken,
@@ -847,5 +879,6 @@ module.exports = {
     editProduct,
     checkProductCodeRemove,
     removeProduct,
-    reserverOrder
+    reserverOrder,
+    checkSuggestions
 }

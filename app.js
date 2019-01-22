@@ -282,6 +282,17 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_suggestions":
+            Gera.checkSuggestions(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              if (result.input && result.input.hasSuggestions) result.input.data = CustomMessage(watsonData.context.userPayload.suggestionsProducts, 'suggestionsProducts')
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
+
           default:
             resolve(watsonData)
             break;

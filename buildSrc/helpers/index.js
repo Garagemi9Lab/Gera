@@ -87,6 +87,10 @@ function CustomMessage(payload, action) {
                 customMessage += `Nome: ${item.productName} <br>Cod: ${item.productCode}<br>Desc: ${item.productDescription}<br>Valor: ${item.unityPrice}<br><hr>`
             })
             break;
+
+        case 'suggestionsProducts':
+
+            break;
     }
     return customMessage
 }
