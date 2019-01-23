@@ -872,3 +872,18 @@ z
 .checklist_reply_item{
   font-size: 9pt;
 }
+.quick_reply_checklist_item_holder{
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #000;
+  font-size: 8pt;
+}
+
+.quick_reply_checklist_item_checkbox, .quick_reply_checklist_qty{
+  display: flex;
+}
+
+.quick_reply_checklist_qty input{
+  width: 40px;
+  margin-left: 20px;
+}

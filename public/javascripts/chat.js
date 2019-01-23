@@ -206,6 +206,60 @@ function QuickReplyElement(quick_reply) {
             button_div.append(qr_button)
             lists_div.append(button_div)
             return lists_div
+
+        case 'checklist':
+            let checklist_div = document.createElement('div')
+            checklist_div.setAttribute('class', 'quick_reply_checklist_items')
+            quick_reply.payload.listItems.forEach(item => {
+                let div = document.createElement('div')
+                div.setAttribute('class', 'quick_reply_checklist_item_holder')
+
+                let checkbox_div = document.createElement('div')
+                checkbox_div.setAttribute('class', 'quick_reply_checklist_item_checkbox')
+                let input = document.createElement('input')
+                input.setAttribute('type', 'checkbox')
+                input.setAttribute('id', item.code)
+                input.setAttribute('hidden_value', quick_reply.payload.listCode + '-' + item.code)
+                let label = document.createElement('label')
+                label.setAttribute('for', item.code)
+                label.innerHTML = item.name
+                checkbox_div.append(input)
+                checkbox_div.append(label)
+
+                let qty_div = document.createElement('div')
+                qty_div.setAttribute('class', 'quick_reply_checklist_qty')
+
+                let input_qty = document.createElement('input')
+                input_qty.setAttribute('type', 'number')
+                input_qty.setAttribute('id', 'qty' + item.code)
+                input_qty.setAttribute('min', '0')
+                input_qty.setAttribute('max', item.maxQuantity)
+
+                let label_qty = document.createElement('label')
+                label_qty.setAttribute('for', 'qty' + item.code)
+                label_qty.innerHTML = 'Qtd: '
+                qty_div.append(label_qty)
+                qty_div.append(input_qty)
+
+                let price_div = document.createElement('div')
+                price_div.innerHTML = 'Valor: ' + item.price
+
+                div.append(checkbox_div)
+                div.append(qty_div)
+                div.append(price_div)
+                checklist_div.append(div)
+            })
+
+            let btn_div = document.createElement('div')
+            btn_div.setAttribute('class', 'quick_reply_checklist_btn_div')
+            let qr_btn = document.createElement('button')
+            qr_btn.setAttribute('class', 'quick_reply_checklists_finish_btn')
+            qr_btn.onclick = quickRepliesChecklistFinish
+            qr_btn.innerHTML = 'Selecionar'
+            btn_div.append(qr_btn)
+            checklist_div.append(btn_div)
+            return checklist_div
+
         default:
             let button = document.createElement('button')
             button.setAttribute('class', 'quick_reply_btn')
@@ -213,6 +267,42 @@ function QuickReplyElement(quick_reply) {
             button.setAttribute('hidden_value', quick_reply.payload.value)
             button.innerHTML = quick_reply.title
             return button
+    }
+}
+
+function quickRepliesChecklistFinish() {
+    let items = document.getElementsByClassName('quick_reply_checklist_item_holder')
+    let selected_items = []
+    for (var i = 0; i < items.length; i++) {
+        let checkbox = items[i].childNodes[0].childNodes[0]
+        let label = items[i].childNodes[0].childNodes[1].innerHTML
+        let quantity = items[i].childNodes[1].childNodes[1]
+        if (!checkbox.disabled && checkbox.checked) {
+
+            if (quantity.value > 0) {
+                let hidden_value = checkbox.getAttribute('hidden_value')
+                selected_items.push({
+                    listCode: parseInt(hidden_value.split('-')[0]),
+                    itemCode: parseInt(hidden_value.split('-')[1]),
+                    itemName: label,
+                    quantity: quantity.value
+                })
+            } else {
+                alert('Favor informe a quantidade do produto : ' + label)
+                return
+            }
+        } else {
+            if (!checkbox.checked && quantity.value > 0) {
+                alert('Favor selecione o produto: ' + label)
+                return
+            }
+        }
+
+    }
+
+    if (selected_items.length > 0) {
+        disableQuickReplyCheckList()
+        showUserQuickReplyChecklistMessage(selected_items)
     }
 }
 
@@ -265,6 +355,43 @@ function quickRepliesFinish() {
         showUserQuickReplyMessage(selected_list)
         removeDisableBlock()
     }
+}
+
+function disableQuickReplyCheckList() {
+    let items = document.getElementsByClassName('quick_reply_checklist_item_holder')
+    for (var i = 0; i < items.length; i++) {
+        let checkbox = items[i].childNodes[0].childNodes[0]
+        if (!checkbox.disabled) {
+            checkbox.disabled = true
+            let quantity = items[i].childNodes[1].childNodes[1]
+            if (!quantity.disabled) quantity.disabled = true
+        }
+
+    }
+
+    let finishButtons = document.getElementsByClassName('quick_reply_checklists_finish_btn')
+    for (var k = 0; k < finishButtons.length; k++) {
+        if (!finishButtons[k].disabled) finishButtons[k].disabled = true
+    }
+}
+function showUserQuickReplyChecklistMessage(selected_items) {
+    let div = document.createElement('div')
+    div.setAttribute('class', 'checklists_reply_div')
+
+    selected_items.forEach((item) => {
+        let list_div = document.createElement('div')
+        list_div.setAttribute('class', 'checklist_reply_div_item')
+
+        let list_title = document.createElement('div')
+        // list_title.setAttribute('class', 'checklist_reply_title_div')
+        list_title.innerHTML = item.itemName + '<br>Qtd: ' + item.quantity + '<br>'
+        list_div.append(list_title)
+        div.append(list_div)
+
+    })
+
+    displayMessage(div, 'user', 'htmlElement')
+    userMessage('', 'selectConditionalSale', selected_items)
 }
 
 function disableQuickReplyCheckLists() {

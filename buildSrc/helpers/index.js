@@ -40,7 +40,6 @@ function QuickReplies(payload, action) {
             }, [])
             break;
         case "starterKits":
-
             quick_replies = [
                 {
                     type: 'checklists',
@@ -57,6 +56,18 @@ function QuickReplies(payload, action) {
                             })
                             return acc
                         }, [])
+                    }
+                }
+            ]
+            break;
+
+        case "conditionalSalesItems":
+            quick_replies = [
+                {
+                    type: 'checklist',
+                    payload: {
+                        listCode: payload.conditionalSaleCode,
+                        listItems: payload.conditionalSaleItems.map(item => ({ name: item.productName, code: item.productCode, price: item.unitPrice, maxQuantity: item.maximumQuantity, unitPoints: item.unitPoints }))
                     }
                 }
             ]
@@ -90,6 +101,16 @@ function CustomMessage(payload, action) {
 
         case 'suggestionsProducts':
             //message += 'Nome: ' + product.productName + '<br>Cód: ' + product.productCode + '<br>Msg: ' + product.collectionMessage + '<br>Qtd sugerida: ' + product.suggestedQuantity + '<br>Pontos: ' + product.unitPointsQuantity + '<br>Valor: ' + product.unitValue + '<br><hr>'
+            break;
+
+        case 'conditionalSales':
+            customMessage = `${payload.conditionalSaleName}`
+            if (payload.valueMissingRelease > 0) {
+                customMessage = `Faltam R$ ${payload.valueMissingRelease}<br>${customMessage}<hr>`
+                payload.conditionalSaleItems.forEach(item => {
+                    customMessage += `${item.productName}<br>Cod: ${item.productCode}<br>Valor: ${item.unitPrice}`
+                })
+            }
             break;
     }
     return customMessage

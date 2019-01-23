@@ -875,14 +875,14 @@ const checkGifts = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 let gifts = []
                 // checkAcquiredPromotion(body.acquiredPromotion, gifts).then((gifts) => {
-                    // checkPartialPromotions(body, gifts).then((gifts) => {
-                        console.log(JSON.stringify(gifts, null, 2))
-                        userPayload.order = body
-                        let hasPromostionsToChoose = false
-                        if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
-                        if (gifts.length > 0) resolve({ input: { hasGifts: true, gifts, hasPromostionsToChoose }, userPayload })
-                        else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
-                    // })
+                // checkPartialPromotions(body, gifts).then((gifts) => {
+                console.log(JSON.stringify(gifts, null, 2))
+                userPayload.order = body
+                let hasPromostionsToChoose = false
+                if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
+                if (gifts.length > 0) resolve({ input: { hasGifts: true, gifts, hasPromostionsToChoose }, userPayload })
+                else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
+                // })
                 // })
             } else {
                 reject({ err: body })
@@ -938,6 +938,75 @@ const checkPartialPromotions = (partialPromotions, gifts) => {
     })
 }
 
+const checkConditionalSales = (watsonData) => {
+    console.log('Check Conditional Sales method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode == 200) {
+                body = JSON.parse(body)
+                if (body.length > 0) {
+
+                    userPayload.conditionalSale = body[0]
+                    watsonData.context.userPayload = userPayload
+                    checkConditionalSalesItems(watsonData).then((userPayload) => {
+                        resolve({ input: { hasConditionalSales: true }, userPayload })
+                    })
+                } else {
+                    console.log('There is no conditional sales')
+                    resolve({ input: { hasConditionalSales: false }, userPayload })
+                }
+
+            } else {
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const checkConditionalSalesItems = (watsonData) => {
+    console.log('Check conditional sales items method invoked ')
+    return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+        const code = userPayload.conditionalSale.conditionalSaleCode
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales/${code}/items`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode == 200) {
+                body = JSON.parse(body)
+                userPayload.conditionalSale = body
+                resolve(userPayload)
+            } else {
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+
+    })
+}
+
+const selectConditionalSale = (watsonData) => {
+    console.log('Select conditional sale method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selectedItems = watsonData.output.selectedItems
+
+        console.log(JSON.stringify(selectedItems, null, 2))
+
+        delete userPayload.conditionalSale
+
+        resolve({ input: { selectedConditionalSale: true }, userPayload })
+    })
+}
 
 
 module.exports = {
@@ -962,5 +1031,7 @@ module.exports = {
     removeProduct,
     reserverOrder,
     checkSuggestions,
-    checkGifts
+    checkGifts,
+    checkConditionalSales,
+    selectConditionalSale
 }
