@@ -89,7 +89,7 @@ function CustomMessage(payload, action) {
             break;
 
         case 'suggestionsProducts':
-
+            //message += 'Nome: ' + product.productName + '<br>Cód: ' + product.productCode + '<br>Msg: ' + product.collectionMessage + '<br>Qtd sugerida: ' + product.suggestedQuantity + '<br>Pontos: ' + product.unitPointsQuantity + '<br>Valor: ' + product.unitValue + '<br><hr>'
             break;
     }
     return customMessage

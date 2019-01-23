@@ -421,7 +421,7 @@ const createNewOrder = (watsonData) => {
             itemsToChoose: userPayload.itemsToChoose,
             collectionMode: process.env.COLLECTION_MODE,
             collectionSystem: process.env.COLLECTION_SYSTEM,
-            marketingCycle: marketingCycle || null,
+            marketingCycle: null,
             isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
             originSystem: process.env.ORIGIN_SYSTEM,
             startNewCycle: false
@@ -793,35 +793,6 @@ const removeProduct = (watsonData) => {
     })
 }
 
-const reserverOrder = (watsonData) => {
-    console.log('Reserve order method inovked')
-    return new Promise((resolve, reject) => {
-        let userPayload = watsonData.context.userPayload
-        let orderNumber = userPayload.order.number
-        const options = {
-            method: 'POST',
-            url: `${URL}/api/orders/${orderNumber}/reserve`,
-            headers: new RequestHeaders(watsonData)
-        }
-
-        request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            if (!error && response.statusCode === 200) {
-                userPayload.order = body
-                resolve({ input: { orderReserved: true }, userPayload })
-            } else if (!error && response.statusCode === 205) {
-                //TODO: verificar isso!
-                userPayload.order = body
-                resolve({ input: { orderReserved: true }, userPayload })
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
-            } else {
-                console.log('Error on reserve order')
-                console.log(JSON.stringify(body))
-            }
-        })
-    })
-}
 
 const checkSuggestions = (watsonData) => {
     console.log('Check suggestions method inovked')
@@ -858,6 +829,116 @@ const checkSuggestions = (watsonData) => {
     })
 }
 
+const reserverOrder = (watsonData) => {
+    console.log('Reserve order method inovked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let orderNumber = userPayload.order.number
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${orderNumber}/reserve`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && (response.statusCode === 200 || response.statusCode === 205)) {
+                userPayload.order = body
+                resolve({ input: { orderReserved: true }, userPayload })
+            } else if (response.statusCode === 401) {
+                console.log('Expired Token')
+            } else {
+                console.log('Error on reserve order')
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const checkGifts = (watsonData) => {
+    console.log('Check gifts method inovked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const giftsBody = {
+            "simulatedPromotion": true,
+            "applicationMomentId": 1
+        }
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${orderNumber}/promotions`,
+            headers: new RequestHeaders(watsonData),
+            body: JSON.stringify(giftsBody)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                let gifts = []
+                // checkAcquiredPromotion(body.acquiredPromotion, gifts).then((gifts) => {
+                    // checkPartialPromotions(body, gifts).then((gifts) => {
+                        console.log(JSON.stringify(gifts, null, 2))
+                        userPayload.order = body
+                        let hasPromostionsToChoose = false
+                        if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
+                        if (gifts.length > 0) resolve({ input: { hasGifts: true, gifts, hasPromostionsToChoose }, userPayload })
+                        else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
+                    // })
+                // })
+            } else {
+                reject({ err: body })
+            }
+        })
+
+    })
+}
+
+const checkAcquiredPromotion = (acquiredPromotion, gifts) => {
+    console.log('Check acquired promotion method invoked')
+    return new Promise((resolve, reject) => {
+        if (acquiredPromotion.length > 0) {
+            acquiredPromotion.forEach(element => {
+                let promotion = {
+                    title: element.title,
+                    description: element.description,
+                    giftType: 'reward'
+                }
+                if (element.rewards.length > 0) {
+                    if (element.rewards[0].type.id == 3) {
+                        promotion.giftType = 'discount'
+                        promotion.discount = element.rewards[0].discount
+                    }
+                }
+                gifts.push(promotion)
+            });
+        }
+        resolve(gifts)
+    })
+}
+
+const checkPartialPromotions = (partialPromotions, gifts) => {
+    console.log('Check partial promotions method invoked..')
+    return new Promise((resolve, reject) => {
+        if (partialPromotions.length > 0) {
+            partialPromotions.forEach((element) => {
+                let promotion = {
+                    title: element.title,
+                    description: element.description,
+                    giftType: 'partial'
+                }
+                if (element.requirements.length > 0) {
+                    if (element.requirements[0].valueType.id == 3) {
+                        promotion.missingValue = element.requirements[0].missingValue
+                        promotion.giftType = 'partialPrice'
+                    }
+                }
+                gifts.push(promotion)
+            })
+        }
+        resolve(gifts)
+    })
+}
+
+
 
 module.exports = {
     getToken,
@@ -880,5 +961,6 @@ module.exports = {
     checkProductCodeRemove,
     removeProduct,
     reserverOrder,
-    checkSuggestions
+    checkSuggestions,
+    checkGifts
 }

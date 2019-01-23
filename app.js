@@ -293,6 +293,16 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_gifts":
+            Gera.checkGifts(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
+
           default:
             resolve(watsonData)
             break;
