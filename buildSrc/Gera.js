@@ -1008,6 +1008,34 @@ const selectConditionalSale = (watsonData) => {
     })
 }
 
+const checkAddresses = (watsonData) => {
+    console.log('Check addresses method inovked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/deliveryAddresses`,
+            headers: new RequestHeaders(watsonData)
+        }
+
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode == 200) {
+                if (body.length > 0) {
+                    userPayload.addresses = body
+                    resolve({ input: { hasAddresses: true }, userPayload })
+                } else {
+                    console.log('There is no addressess registered!')
+                    resolve({ input: { hasAddresses: false }, userPayload })
+                }
+            } else {
+                reject({ err: body })
+            }
+        })
+    })
+}
+
 
 module.exports = {
     getToken,
@@ -1033,5 +1061,6 @@ module.exports = {
     checkSuggestions,
     checkGifts,
     checkConditionalSales,
-    selectConditionalSale
+    selectConditionalSale,
+    checkAddresses
 }

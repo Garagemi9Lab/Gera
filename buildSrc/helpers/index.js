@@ -72,6 +72,19 @@ function QuickReplies(payload, action) {
                 }
             ]
             break;
+
+        case "addresses":
+            quick_replies = payload.reduce((acc,curr) => {
+                acc.push({
+                    title: curr.formattedAddress,
+                    type: "postback_button",
+                    payload: {
+                        value: "<code>" + curr.type.id
+                    }
+                })
+                return acc
+            },[])
+            break;
     }
 
     return quick_replies

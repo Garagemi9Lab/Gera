@@ -328,6 +328,17 @@ const sendToWatson = (params) => {
               }).then(data => resolve(data))
             })
             break;
+
+          case "check_addresses":
+            Gera.checkAddresses(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              if (result.input.hasAddresses) result.input.quick_replies = new QuickReplies(result.userPayload.addresses, 'addresses')
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then(data => resolve(data))
+            })
+            break;
           default:
             resolve(watsonData)
             break;
