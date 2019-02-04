@@ -75,9 +75,13 @@ const checkUserInformations = (watsonData) => {
                         resolve({ userPayload })
                     }).catch((err) => {
                         console.log(err)
+                        if (err.userPayload)
+                            resolve(err)
                     })
             }).catch((err) => {
                 console.log(err)
+                if (err.userPayload)
+                    resolve(err)
             })
     })
 }
@@ -94,9 +98,9 @@ const peopleAPI = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body[0] || null)
-            } else if (response, statusCode === 401) {
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
-                // expiredToken(watsonData).then(result => reject(result))
+                expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error on peopleAPI')
                 reject({ err: body, statusCode: response.statusCode })
@@ -117,8 +121,36 @@ const serviceInfoAPI = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body)
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error on service info API')
+                reject({ err: body, statusCode: response.statusCode })
+            }
+        })
+    })
+}
+
+const checkSystemParameters = (watsonData) => {
+    console.log('Check system parameters method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/parameters?groupCode=${process.env.GROUP_CODE}`,
+            headers: new RequestHeaders(watsonData)
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                userPayload.parameters = body
+                resolve({ userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
+            } else {
+                console.log('Error on check system parameters')
                 reject({ err: body, statusCode: response.statusCode })
             }
         })
@@ -158,12 +190,15 @@ const checkOpenOrders = (watsonData) => {
                 // No Order opened
                 console.log('There is no order opened')
                 resolve({ input: { openOrder: false }, userPayload })
-            } else if (response.statusCode === 401) {
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('An error occured: ', response.statusCode)
                 console.log(body)
-                reject({ err: body, statusCode: response.statusCode })
+                reject({
+                    err: body, statusCode: response.statusCode
+                })
             }
         })
     })
@@ -186,7 +221,10 @@ const getBusinessModels = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 let userPayload = watsonData.context.userPayload
                 userPayload.businessModels = body || null
-                resolve({ userPayload })
+                resolve({ userPayload, input: { hasBusinessModels: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error in getting business models')
                 reject({ err: body })
@@ -219,19 +257,20 @@ const getBusinessModelDeliveryMode = (watsonData) => {
             watsonData.context = Object.assign({}, watsonData.context, result)
             getSellerData(watsonData).then((sellerDataResult) => {
                 let userPayload = watsonData.context.userPayload
-                delete userPayload.user.peopleInfo
                 userPayload.user.sellerInfo = sellerDataResult
                 watsonData.context = Object.assign({}, watsonData.context, { userPayload })
                 businessModelDeliveryMode(watsonData).then((deliveryModeResults) => {
                     let userPayload = watsonData.context.userPayload
                     userPayload.deliveryModes = deliveryModeResults
-                    resolve({ userPayload })
+                    resolve({ userPayload, input: { hasDeliveryModes: true } })
                 }).catch((err) => {
                     console.log('Error on getting delivery modes')
+                    if (err.userPayload) resolve(err)
                     reject(err)
                 })
             }).catch((err) => {
                 console.log('Error on getting seller data')
+                if (err.userPayload) resolve(err)
                 reject(err)
             })
         }).catch((err) => {
@@ -258,6 +297,9 @@ const businessModelDeliveryMode = (watsonData) => {
                     return acc
                 }, [])
                 resolve(body)
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error in getting business model delivery mode')
                 reject({ err: body })
@@ -282,6 +324,9 @@ const getSellerData = (watsonData) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
                 resolve(body || null)
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => reject(result))
             } else {
                 console.log('Error in getting seller data')
                 reject({ err: body })
@@ -371,6 +416,9 @@ const getStarterKit = (watsonData) => {
                 if (!error && response.statusCode === 200) {
                     userPayload.starterKits = body
                     resolve({ userPayload })
+                } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                    console.log('Expired token..: check it..')
+                    expiredToken(watsonData).then(result => resolve(result))
                 } else {
                     console.log('Error on getting starter kit')
                     reject({ err: body, statusCode: response.statusCode })
@@ -390,16 +438,6 @@ const selectKit = (watsonData) => {
                 itemToChooseCode: selectedKit.listCode
             }
         })
-        // let itemsToChoose = []
-        // watsonData.output.selectedKits.forEach((selectedKit) => {
-        // let kit = userPayload.starterKits.filter((starterKit) => starterKit.code == selectedKit.listCode)
-        // kit.products.forEach((product) => {
-        // itemsToChoose.push({
-        // productCode: product.code,
-        // itemToChooseCode: selectedKit.listCode
-        // })
-        // })
-        // })
         delete userPayload.starterKits
         userPayload.itemsToChoose = itemsToChoose
         if (itemsToChoose) {
@@ -415,12 +453,14 @@ const createNewOrder = (watsonData) => {
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
         let marketingCycle = parseInt(userPayload.user.selectedCycle)
+        let distributionCenterCode = userPayload.businessModel.deliveryMode.distributionCenterCode || null
         const order = {
             representativeCode: userPayload.user.id,
             businessModelCode: userPayload.businessModel.code,
             itemsToChoose: userPayload.itemsToChoose,
             collectionMode: process.env.COLLECTION_MODE,
             collectionSystem: process.env.COLLECTION_SYSTEM,
+            distributionCenterCode,
             marketingCycle: null,
             isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
             originSystem: process.env.ORIGIN_SYSTEM,
@@ -438,6 +478,9 @@ const createNewOrder = (watsonData) => {
                 userPayload.order = body
                 console.log(`Order created successfully with number ${body.number}`)
                 resolve({ userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on creating order: ' + response.statusCode)
                 console.log(body)
@@ -466,9 +509,9 @@ const checkPromotions = (watsonData) => {
                 resolve({ input: { hasPromotions: true }, userPayload })
             } else if (response.statusCode === 205) {
                 resolve({ input: { hasPromotions: false } })
-            } else if (response.statusCode === 401) {
-                userPayload.token.valid = false
-                resolve({ userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token..: check it..')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 reject({ err: body })
             }
@@ -501,8 +544,8 @@ const checkStock = (watsonData) => {
                 resolve({ input: { productFound: true, product: body }, userPayload })
             } else if (!error && response.statusCode === 404) {
                 resolve({ input: { productFound: false }, userPayload })
-            } else if (response.statusCode === 401) {
-                // expiredToken(watsonData).then(result => reject(result))
+            } else if (response.statusCode === 401 || response.statusCode === 205) {
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on check Stock');
                 console.log(body)
@@ -525,13 +568,11 @@ const checkProductReplacement = (watsonData) => {
     console.log('Check Product Replacement method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        const productCode = userPayload.foundProduct.productCode
-        checkOrderState(watsonData).then((result) => {
-            checkProductSubstitute(watsonData).then((result) => {
-                console.log(JSON.stringify(result, null, 2))
-                resolve(result)
-            })
+        // checkOrderState(watsonData).then((result) => {
+        checkProductSubstitute(watsonData).then((result) => {
+            resolve(result)
         })
+        // })
     })
 }
 
@@ -546,14 +587,25 @@ const checkOrderState = (watsonData) => {
             headers: new RequestHeaders(watsonData)
         }
         request(options, (error, response, body) => {
-            body = JSON.parse(body)
-            console.log(JSON.stringify(body, null, 2))
             if (!error && response.statusCode == 200) {
-                userPayload.orderState = body
-                resolve({ userPayload })
-            } else if (response.statusCode === 401) {
+                body = JSON.parse(body)
+                userPayload.order = body
+                if (body.items.length > 0) {
+                    resolve({ input: { openOrder: true, hasItems: true }, userPayload })
+                } else {
+                    resolve({ input: { openOrder: true, hasItems: false }, userPayload })
+                }
+            } else if (!error && response.statusCode === 204) {
+                // No Order opened
+                console.log('There is no order opened')
+                resolve({ input: { openOrder: false }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
+                console.log('An error occured on checking order state')
+                console.log(response.statusCode)
+                console.log(body)
                 reject({ err: body, statusCode: response.statusCode })
             }
         })
@@ -579,11 +631,32 @@ const checkProductSubstitute = (watsonData) => {
             } else if (response.statusCode === 404) {
                 console.log(JSON.stringify(body, null, 2))
                 resolve({ input: { hasSubstitutes: false } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on checking product substitute')
             }
         })
     })
+}
+
+const addProductToCart = (watsonData) => {
+    console.log('Add product to cart method invoked')
+
+    // Check if product exists
+    let userPayload = watsonData.context.userPayload
+    const addProductCode = userPayload.foundProduct.productCode
+    let checkedProduct = userPayload.order.items.filter((product) => {
+        return product.productCode == addProductCode
+    })[0] || null
+    if (checkedProduct) {
+        // Edit product 
+        return editProductToAdd(watsonData)
+    } else {
+        return addProduct(watsonData)
+    }
+
 }
 
 const addProduct = (watsonData) => {
@@ -619,9 +692,9 @@ const addProduct = (watsonData) => {
                 delete userPayload.foundProduct
                 delete userPayload.productQuantity
                 resolve({ input: { productAdded: true }, userPayload })
-            } else if (response.statusCode === 401) {
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
-                // resolve({ expiredToken: true })
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log(JSON.stringify(body))
                 console.log('Error on adding product to cart')
@@ -651,6 +724,9 @@ const deleteOrder = (watsonData) => {
                         token: userPayload.token
                     }
                 })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on deleting the order')
                 reject({ err: body, statusCode: response.statusCode })
@@ -676,6 +752,58 @@ const checkProductCode = (watsonData) => {
         } else {
             resolve({ input: { validProductCode: false }, userPayload })
         }
+    })
+}
+
+const editProductToAdd = (watsonData) => {
+    console.log('Edit product to add method invoked')
+    return new Promise((resolve, reject) => {
+
+
+        let userPayload = watsonData.context.userPayload
+        const productCode = userPayload.foundProduct.productCode
+        let quantity = userPayload.productQuantity
+        const product = userPayload.order.items.filter((item) => {
+            return item.productCode === productCode
+        })[0] || null
+
+        if (product) quantity += product.quantity
+
+        const newItem = [
+            {
+                "productCode": `${productCode}`,
+                "productCodeSent": true,
+                "quantity": quantity,
+                "quantitySent": true,
+                "itemToChooseCode": 0,
+                "origin": product.origin.id,
+                "number": product.number,
+                "confirmedAssociatedItemDeletion": false,
+                "cutProductCode": 0,
+                "cutProductQuantity": 0
+            }
+        ]
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${userPayload.order.number}/items?eventChangeQuantity%5B%5D=replaceQuantity`,
+            headers: new RequestHeaders(watsonData),
+            body: JSON.stringify(newItem)
+        }
+        request(options, (error, response, body) => {
+            body = JSON.parse(body)
+            if (!error && response.statusCode === 200) {
+                userPayload.order = body
+                delete userPayload.foundProduct
+                delete userPayload.productQuantity
+                resolve({ input: { productAdded: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
+            } else {
+                console.log('Error on editing the product')
+                console.log(error)
+            }
+        })
     })
 }
 
@@ -716,8 +844,9 @@ const editProduct = (watsonData) => {
                 delete userPayload.editProductCode
                 delete userPayload.editQuantity
                 resolve({ input: { productEdited: true }, userPayload })
-            } else if (response.statusCode === 401) {
-                resolve({ expiredToken: true })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on editing the product')
                 console.log(error)
@@ -782,9 +911,9 @@ const removeProduct = (watsonData) => {
                 userPayload.order = body
                 delete userPayload.removeProductCode
                 resolve({ input: { productRemoved: true }, userPayload })
-            } else if (response.statusCode === 401) {
-                console.log('Expired session')
-                // resolve({ expiredToken: true })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
                 console.log('Error on editing the product')
                 console.log(error)
@@ -815,7 +944,7 @@ const checkSuggestions = (watsonData) => {
                     userPayload.suggestionsProducts = body
                     resolve({ input: { hasSuggestions: true }, userPayload })
                 }
-            } else if (response.statusCode === 401) {
+            } else if (response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired Token')
                 // resolve({ expiredToken: true })
             } else if (response.statusCode == 404) {
@@ -844,10 +973,15 @@ const reserverOrder = (watsonData) => {
             if (!error && (response.statusCode === 200 || response.statusCode === 205)) {
                 userPayload.order = body
                 resolve({ input: { orderReserved: true }, userPayload })
-            } else if (response.statusCode === 401) {
-                console.log('Expired Token')
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
+            } else if (response && response.statusCode == 400) {
+                resolve({ input: { errorMessage: body[0].message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log('Error on reserve order')
+                console.log(response.statusCode)
+                console.log(body)
                 reject({ err: body, statusCode: response.statusCode })
             }
         })
@@ -951,18 +1085,24 @@ const checkConditionalSales = (watsonData) => {
             if (!error && response.statusCode == 200) {
                 body = JSON.parse(body)
                 if (body.length > 0) {
-
-                    userPayload.conditionalSale = body[0]
+                    console.log('There is conditional sales')
+                    userPayload.conditionalSale = body || null
                     watsonData.context.userPayload = userPayload
-                    checkConditionalSalesItems(watsonData).then((userPayload) => {
-                        resolve({ input: { hasConditionalSales: true }, userPayload })
-                    })
+                    // checkConditionalSalesItems(watsonData).then((userPayload) => {
+                    resolve({ input: { hasConditionalSales: true }, userPayload })
+                    // })
                 } else {
                     console.log('There is no conditional sales')
                     resolve({ input: { hasConditionalSales: false }, userPayload })
                 }
 
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
             } else {
+                console.log('Error on checking conditional sales ')
+                console.log(response.statusCode)
+                console.log(body)
                 reject({ err: body, statusCode: response.statusCode })
             }
         })
@@ -1040,6 +1180,7 @@ const checkAddresses = (watsonData) => {
 module.exports = {
     getToken,
     checkUserInformations,
+    checkSystemParameters,
     checkOpenOrders,
     getBusinessModels,
     getBusinessModelDeliveryMode,
@@ -1051,7 +1192,9 @@ module.exports = {
     checkStock,
     getProductToAdd,
     checkProductReplacement,
+    addProductToCart,
     addProduct,
+    checkOrderState,
     deleteOrder,
     checkProductCode,
     editProduct,

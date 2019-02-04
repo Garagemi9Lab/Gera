@@ -70,27 +70,39 @@ const sendToWatson = (params) => {
         switch (watsonData.output.action) {
           case "check_user_informations":
             Gera.checkUserInformations(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
-              Gera.checkOpenOrders(watsonData).then((result) => {
-                watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-                sendToWatson({
-                  context: watsonData.context,
-                  input: result.input
-                }).then((data) => resolve(data))
-              }).catch(error => {
-                console.log('Error on checking user info')
-                console.log(error)
-              })
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({
+                context: watsonData.context,
+                input: result.input
+              }).then((data) => resolve(data))
             }).catch(error => {
               console.log('Error on checking user info')
               console.log(error)
             })
             break;
 
+          case "check_system_parameters":
+            Gera.checkSystemParameters(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.userPayload.parameters) {
+                params.input = {
+                  action: 'checkOpenOrders'
+                }
+              }
+              sendToWatson(
+                params
+              ).then(data => resolve(data))
+            }).catch(err => {
+              console.log("Error on checking system parameters")
+              console.log(err)
+            })
+            break;
+
           case "check_open_orders":
             Gera.checkOpenOrders(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              if (result.input) result.input.data = CustomMessage(result.userPayload.order, 'order')
+              if (result.input && result.input.openOrder) result.input.data = CustomMessage(result.userPayload.order, 'order')
               sendToWatson({
                 context: watsonData.context,
                 input: result.input
@@ -104,13 +116,12 @@ const sendToWatson = (params) => {
           case "get_business_models":
             Gera.getBusinessModels(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({
-                context: watsonData.context,
-                input: {
-                  action: 'showBusinessModels',
-                  quick_replies: new QuickReplies(result.userPayload.businessModels, 'businessModels')
-                }
-              }).then((data) => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                action: 'showBusinessModels',
+                quick_replies: new QuickReplies(result.userPayload.businessModels, 'businessModels')
+              }
+              sendToWatson(params).then((data) => resolve(data))
             }).catch(error => {
               console.log('Error on getting business models')
               console.log(error)
@@ -120,13 +131,12 @@ const sendToWatson = (params) => {
           case "select_business_model":
             Gera.getBusinessModelDeliveryMode(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({
-                context: watsonData.context,
-                input: {
-                  action: 'showDeliveryModes',
-                  quick_replies: new QuickReplies(result.userPayload.deliveryModes, 'deliveryModes')
-                }
-              }).then((data) => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                action: 'showDeliveryModes',
+                quick_replies: new QuickReplies(result.userPayload.deliveryModes, 'deliveryModes')
+              }
+              sendToWatson(params).then((data) => resolve(data))
             })
             break;
 
@@ -142,17 +152,24 @@ const sendToWatson = (params) => {
               }).then((data) => resolve(data))
             })
             break;
-
+          // disable select kits
+          // case 'select_cycle':
+          //   Gera.getStarterKit(watsonData).then((result) => {
+          //     watsonData.context = Object.assign({}, watsonData.context, result)
+          //     let params = { context: watsonData.context }
+          //     if (result.userPayload.starterKits) params.input = {
+          //       action: 'showStarterKits',
+          //       quick_replies: new QuickReplies(result.userPayload.starterKits, 'starterKits')
+          //     }
+          //     sendToWatson(params).then((data) => resolve(data))
+          //   })
+          //   break;
           case 'select_cycle':
-            Gera.getStarterKit(watsonData).then((result) => {
+            Gera.createNewOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({
-                context: watsonData.context,
-                input: {
-                  action: 'showStarterKits',
-                  quick_replies: new QuickReplies(result.userPayload.starterKits, 'starterKits')
-                }
-              }).then((data) => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.userPayload.order) params.input = { action: 'newOrder' }
+              sendToWatson(params).then((data) => resolve(data))
             })
             break;
           case "select_kits":
@@ -175,10 +192,9 @@ const sendToWatson = (params) => {
           case 'get_stock':
             Gera.checkStock(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then((data) => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
             }).catch(error => {
               console.log('Error on checking product stock')
               console.log(error)
@@ -198,21 +214,19 @@ const sendToWatson = (params) => {
           case "check_product_replace":
             Gera.checkProductReplacement(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
               if (result.input && result.input.hasSubstitutes) result.input.data = CustomMessage(result.userPayload.substitutions, 'substitutions')
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then((data) => resolve(data))
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
             })
             break;
 
           case "add_product":
-            Gera.addProduct(watsonData).then((result) => {
+            Gera.addProductToCart(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             }).catch((err) => {
               console.log('An error occured on add product method. ')
               console.log(err)
@@ -222,10 +236,9 @@ const sendToWatson = (params) => {
           case "delete_order":
             Gera.deleteOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             }).catch((err) => {
               console.log('Error on deleting the order')
               console.log(err)
@@ -245,10 +258,9 @@ const sendToWatson = (params) => {
           case "edit_product":
             Gera.editProduct(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 
@@ -265,20 +277,28 @@ const sendToWatson = (params) => {
           case "remove_product":
             Gera.removeProduct(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 
           case "reserve_order":
             Gera.reserverOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "check_order_state":
+            Gera.checkOrderState(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input && result.input.openOrder) result.input.data = CustomMessage(result.userPayload.order, 'order')
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 
@@ -306,16 +326,15 @@ const sendToWatson = (params) => {
           case "check_conditional_sales":
             Gera.checkConditionalSales(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
               if (result.input && result.input.hasConditionalSales) {
                 result.input.data = CustomMessage(result.userPayload.conditionalSale, 'conditionalSales')
-                if (result.userPayload.conditionalSale.valueMissingRelease == 0) {
-                  result.input.quick_replies = new QuickReplies(result.userPayload.conditionalSale, 'conditionalSalesItems')
-                }
+                // if (result.userPayload.conditionalSale.valueMissingRelease == 0) {
+                  // result.input.quick_replies = new QuickReplies(result.userPayload.conditionalSale, 'conditionalSalesItems')
+                // }
               }
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 

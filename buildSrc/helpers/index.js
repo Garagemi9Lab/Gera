@@ -74,7 +74,7 @@ function QuickReplies(payload, action) {
             break;
 
         case "addresses":
-            quick_replies = payload.reduce((acc,curr) => {
+            quick_replies = payload.reduce((acc, curr) => {
                 acc.push({
                     title: curr.formattedAddress,
                     type: "postback_button",
@@ -83,7 +83,7 @@ function QuickReplies(payload, action) {
                     }
                 })
                 return acc
-            },[])
+            }, [])
             break;
     }
 
@@ -117,13 +117,16 @@ function CustomMessage(payload, action) {
             break;
 
         case 'conditionalSales':
-            customMessage = `${payload.conditionalSaleName}`
-            if (payload.valueMissingRelease > 0) {
-                customMessage = `Faltam R$ ${payload.valueMissingRelease}<br>${customMessage}<hr>`
-                payload.conditionalSaleItems.forEach(item => {
-                    customMessage += `${item.productName}<br>Cod: ${item.productCode}<br>Valor: ${item.unitPrice}`
-                })
-            }
+            customMessage = ''
+            payload.forEach(conditionalSale => {
+                customMessage = `${conditionalSale.conditionalSaleName}`
+                if (payload.valueMissingRelease > 0) {
+                    customMessage = `Faltam R$ ${conditionalSale.valueMissingRelease}<br>${customMessage}<hr>`
+                    // payload.conditionalSaleItems.forEach(item => {
+                    // customMessage += `${item.productName}<br>Cod: ${item.productCode}<br>Valor: ${item.unitPrice}`
+                    // })
+                }
+            })
             break;
     }
     return customMessage
