@@ -168,7 +168,7 @@ const sendToWatson = (params) => {
             Gera.createNewOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
               let params = { context: watsonData.context }
-              if (result.userPayload.order) params.input = { action: 'newOrder' }
+              if (result.input) params.input = result.input
               sendToWatson(params).then((data) => resolve(data))
             })
             break;

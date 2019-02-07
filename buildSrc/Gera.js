@@ -477,10 +477,12 @@ const createNewOrder = (watsonData) => {
             if (!error && response.statusCode === 201) {
                 userPayload.order = body
                 console.log(`Order created successfully with number ${body.number}`)
-                resolve({ userPayload })
+                resolve({ userPayload , input:{ action: 'newOrder'} })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token..: check it..')
                 expiredToken(watsonData).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                resolve({ input: { errorMessage: body.message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log('Error on creating order: ' + response.statusCode)
                 console.log(body)
@@ -1207,9 +1209,9 @@ const addProductsToCart = watsonData => {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-                
-                if(items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
-                
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
