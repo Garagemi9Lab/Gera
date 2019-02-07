@@ -906,8 +906,8 @@ const removeProduct = (watsonData) => {
             body: JSON.stringify(newItem)
         }
         request(options, (error, response, body) => {
-            body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
                 userPayload.order = body
                 delete userPayload.removeProductCode
                 resolve({ input: { productRemoved: true }, userPayload })
@@ -915,7 +915,7 @@ const removeProduct = (watsonData) => {
                 console.log('Expired token')
                 expiredToken(watsonData).then(result => resolve(result))
             } else {
-                console.log('Error on editing the product')
+                console.log('Error on removing the product')
                 console.log(error)
             }
         })
@@ -1086,11 +1086,11 @@ const checkConditionalSales = (watsonData) => {
                 body = JSON.parse(body)
                 if (body.length > 0) {
                     console.log('There is conditional sales')
-                    userPayload.conditionalSale = body || null
+                    userPayload.conditionalSales = body || null
                     watsonData.context.userPayload = userPayload
-                    // checkConditionalSalesItems(watsonData).then((userPayload) => {
-                    resolve({ input: { hasConditionalSales: true }, userPayload })
-                    // })
+                    checkConditionalSalesItems(watsonData).then((userPayload) => {
+                        resolve({ input: { hasConditionalSales: true }, userPayload })
+                    })
                 } else {
                     console.log('There is no conditional sales')
                     resolve({ input: { hasConditionalSales: false }, userPayload })
@@ -1110,41 +1110,115 @@ const checkConditionalSales = (watsonData) => {
 }
 
 const checkConditionalSalesItems = (watsonData) => {
-    console.log('Check conditional sales items method invoked ')
+    console.log('Check Conditional Sales items method invoked')
     return new Promise((resolve, reject) => {
-
         let userPayload = watsonData.context.userPayload
-        const code = userPayload.conditionalSale.conditionalSaleCode
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales/${code}/items`,
-            headers: new RequestHeaders(watsonData)
+        checkConditionalSaleItems(userPayload, 0)
+            .then(resolve)
+    })
+}
+
+const checkConditionalSaleItems = (userPayload, index) => {
+    return new Promise((resolve, reject) => {
+        let conditionalSales = userPayload.conditionalSales
+        if (index < conditionalSales.length) {
+            const code = conditionalSales[index].conditionalSaleCode
+            console.log(`Check conditional sale (${code}) items method invoked `)
+            const options = {
+                method: 'GET',
+                url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales/${code}/items`,
+                headers: new RequestHeaders({ context: { userPayload } })
+            }
+
+            request(options, (error, response, body) => {
+                if (!error && response.statusCode == 200) {
+                    body = JSON.parse(body)
+                    userPayload.conditionalSales[index].conditionalSaleItems = body.conditionalSaleItems
+                    resolve(checkConditionalSaleItems(userPayload, index + 1))
+                } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                    console.log('Expired token')
+                    expiredToken({ context: { userPayload } }).then(result => resolve(result))
+                } else {
+                    reject({ err: body, statusCode: response.statusCode })
+                }
+            })
+        } else {
+            resolve(userPayload)
         }
 
-        request(options, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
-                body = JSON.parse(body)
-                userPayload.conditionalSale = body
-                resolve(userPayload)
-            } else {
-                reject({ err: body, statusCode: response.statusCode })
-            }
+    })
+}
+
+const selectConditionalSalesItems = (watsonData) => {
+    console.log('Select conditional sale method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selectedItems = watsonData.output.selectedItems
+        delete userPayload.conditionalSales
+
+        userPayload.selectedItems = selectedItems
+        watsonData.context.userPayload = userPayload
+        addProductsToCart(watsonData).then((result) => {
+            let userPayload = Object.assign({}, watsonData.context.userPayload, result.userPayload)
+            resolve({ input: result.input, userPayload })
         })
 
     })
 }
 
-const selectConditionalSale = (watsonData) => {
-    console.log('Select conditional sale method invoked')
+const addProductsToCart = watsonData => {
+    console.log('Add products to cart method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        let selectedItems = watsonData.output.selectedItems
+        let selectedItems = userPayload.selectedItems
 
-        console.log(JSON.stringify(selectedItems, null, 2))
 
-        delete userPayload.conditionalSale
+        let items = selectedItems.map((item) => ({
+            "productCode": `${item.code}`,
+            "productCodeSent": true,
+            "productModelCodeSent": false,
+            "quantity": item.quantity,
+            "quantitySent": true,
+            "sellerCodeSent": false,
+            "itemToChooseCode": 0,
+            "origin": 0,
+            "number": 0,
+            "confirmedAssociatedItemDeletion": false,
+            "cutProductCode": 0,
+            "cutProductQuantity": 0
+        }))
 
-        resolve({ input: { selectedConditionalSale: true }, userPayload })
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${userPayload.order.number}/items`,
+            headers: new RequestHeaders(watsonData),
+            body: JSON.stringify(items)
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                userPayload.order = body
+                delete userMessage.selectedItems
+                resolve({ input: { selectedConditionalSalesItems: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+                
+                if(items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+                
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+        })
+
+
     })
 }
 
@@ -1204,6 +1278,6 @@ module.exports = {
     checkSuggestions,
     checkGifts,
     checkConditionalSales,
-    selectConditionalSale,
+    selectConditionalSalesItems,
     checkAddresses
 }

@@ -260,6 +260,143 @@ function QuickReplyElement(quick_reply) {
             checklist_div.append(btn_div)
             return checklist_div
 
+        case "Collapsible-list":
+            let collapsible_holder = document.createElement('div')
+            collapsible_holder.setAttribute('class', 'collapsible-holder')
+            let disabled = false
+            let disabledBtn = true
+            quick_reply.payload.forEach((collapsible_item) => {
+                if (collapsible_item.type == 'Collapsible-item') {
+                    console.log(collapsible_item)
+                    disabled = collapsible_item.enabled ? false : true
+                    if (collapsible_item.enabled) disabledBtn = false
+                    let collapsible_item_div = document.createElement('div')
+                    collapsible_item_div.setAttribute('class', 'collapsible-item')
+                    collapsible_item_div.setAttribute('id', collapsible_item.listCode)
+                    collapsible_item_div.setAttribute('open', false)
+
+                    // Header
+                    let collapsible_header = document.createElement('div')
+                    collapsible_header.setAttribute('class', 'collapsible-header')
+                    let collapsible_title_holder = document.createElement('div')
+                    collapsible_title_holder.setAttribute('class', 'collapsible-title-holder')
+                    let collapsible_title = document.createElement('div')
+                    collapsible_title.setAttribute('class', 'collapsible-title')
+                    collapsible_title.innerHTML = collapsible_item.title
+                    let collapsible_status = document.createElement('div')
+                    collapsible_status.setAttribute('class', collapsible_item.enabled ? 'status-enabled' : 'status-disabled')
+                    collapsible_status.innerHTML = collapsible_item.status
+                    let collapsible_arrow_holder = document.createElement('div')
+                    collapsible_arrow_holder.setAttribute('class', 'collapsible-arrow-holder')
+                    let collapsible_arrow_div = document.createElement('div')
+                    collapsible_arrow_div.setAttribute('class', 'collapsible-arrow-div')
+                    collapsible_arrow_div.onclick = function () { collapsibleToggle(collapsible_item.listCode) }
+                    let arrow_img = document.createElement('img')
+                    arrow_img.setAttribute('src', '/img/down-arrow.png')
+                    arrow_img.setAttribute('class', 'arrow-icon')
+                    collapsible_arrow_div.append(arrow_img)
+                    collapsible_arrow_holder.append(collapsible_arrow_div)
+                    collapsible_title_holder.append(collapsible_title)
+                    collapsible_title_holder.append(collapsible_status)
+                    collapsible_header.append(collapsible_title_holder)
+                    collapsible_header.append(collapsible_arrow_holder)
+                    collapsible_item_div.append(collapsible_header)
+
+                    // Content
+                    let collapsible_body = document.createElement('div')
+                    collapsible_body.setAttribute('class', 'collapsible-body')
+
+                    collapsible_item.listItems.forEach((item) => {
+
+                        let collapsible_subitem = document.createElement('div')
+                        collapsible_subitem.setAttribute('class', 'collapsible-subitem')
+                        collapsible_subitem.setAttribute('id', collapsible_item.listCode + '-' + item.code)
+
+                        let subitem_title = document.createElement('div')
+                        subitem_title.setAttribute('class', 'collapsible-subitem-title')
+                        subitem_title.innerHTML = 'Produto: ' + item.name
+
+                        let subitem_code = document.createElement('div')
+                        subitem_code.setAttribute('class', 'collapsible-subitem-code')
+                        subitem_code.innerHTML = 'Cod: ' + item.code
+
+                        let subitem_quantity_holder = document.createElement('div')
+                        subitem_quantity_holder.setAttribute('class', 'collapsible-subitem-quantity-holder')
+
+                        let quantity_label = document.createElement('div')
+                        quantity_label.setAttribute('class', 'collapsible-subitem-quantity-label')
+                        quantity_label.innerHTML = 'Quantidade: '
+
+                        let remove_quantity_btn = document.createElement('button')
+                        remove_quantity_btn.setAttribute('class', 'collapsible-subitem-remove-quantity-btn')
+                        if (disabled)
+                            remove_quantity_btn.setAttribute('disabled', disabled)
+                        remove_quantity_btn.onclick = function () { removeQuantityToItem('input-' + collapsible_item.listCode + '-' + item.code) }
+
+                        let quantity_input = document.createElement('input')
+                        quantity_input.setAttribute('type', 'number')
+                        quantity_input.setAttribute('class', 'collapsible-subitem-quantity-input')
+                        quantity_input.setAttribute('id', 'input-' + collapsible_item.listCode + '-' + item.code)
+                        quantity_input.setAttribute('max', item.maximumQuantity)
+                        quantity_input.setAttribute('min', 0)
+                        quantity_input.setAttribute('value', 0)
+                        if (disabled)
+                            quantity_input.setAttribute('disabled', disabled)
+
+                        let add_quantity_btn = document.createElement('button')
+                        add_quantity_btn.setAttribute('class', 'collapsible-subitem-add-quantity-btn')
+                        if (disabled)
+                            add_quantity_btn.setAttribute('disabled', disabled)
+                        add_quantity_btn.onclick = function () { addQuantityToItem('input-' + collapsible_item.listCode + '-' + item.code) }
+
+                        subitem_quantity_holder.append(quantity_label)
+                        subitem_quantity_holder.append(remove_quantity_btn)
+                        subitem_quantity_holder.append(quantity_input)
+                        subitem_quantity_holder.append(add_quantity_btn)
+
+                        let subitem_unit_price = document.createElement('div')
+                        subitem_unit_price.setAttribute('class', 'collapsible-subitem-unit-price')
+                        subitem_unit_price.innerHTML = 'Valor unitário: ' + item.unitPrice
+
+                        collapsible_subitem.append(subitem_title)
+                        collapsible_subitem.append(subitem_code)
+                        collapsible_subitem.append(subitem_quantity_holder)
+                        collapsible_subitem.append(subitem_unit_price)
+
+                        collapsible_body.append(collapsible_subitem)
+                    })
+
+                    collapsible_item_div.append(collapsible_body)
+                    collapsible_holder.append(collapsible_item_div)
+                    let divider = document.createElement('hr')
+                    divider.setAttribute('class', 'collapsible-divider')
+                    collapsible_holder.append(divider)
+                }
+            })
+
+            let collapsible_btns_holder = document.createElement('div')
+            collapsible_btns_holder.setAttribute('class', 'collapsible-btns-holder')
+            let collapsible_cancel_btn = document.createElement('button')
+            collapsible_cancel_btn.setAttribute('class', 'collapsible-cancel-btn')
+            collapsible_cancel_btn.onclick = cancelCollapsibleOptions
+            collapsible_cancel_btn.innerHTML = 'Cancelar'
+
+            let collapsible_addCart_btn = document.createElement('button')
+            collapsible_addCart_btn.setAttribute('class', 'collapsible-addCart-btn')
+            if (disabledBtn)
+                collapsible_addCart_btn.setAttribute('disabled', disabledBtn)
+            collapsible_addCart_btn.onclick = addCollapsibleOptions
+            collapsible_addCart_btn.innerHTML = 'Incluir itens'
+
+            collapsible_btns_holder.append(collapsible_cancel_btn)
+            collapsible_btns_holder.append(collapsible_addCart_btn)
+
+            collapsible_holder.append(collapsible_btns_holder)
+
+
+            return collapsible_holder
+
+
         default:
             let button = document.createElement('button')
             button.setAttribute('class', 'quick_reply_btn')
@@ -267,6 +404,120 @@ function QuickReplyElement(quick_reply) {
             button.setAttribute('hidden_value', quick_reply.payload.value)
             button.innerHTML = quick_reply.title
             return button
+    }
+}
+
+function disableCollapsibleItems() {
+    let collapsible_items = document.getElementsByClassName('collapsible-item')
+    for (var i = 0; i < collapsible_items.length; i++) {
+        let collapsible_item = collapsible_items[i]
+        collapsible_item.removeAttribute('id')
+        let collapsible_body = collapsible_item.childNodes[1]
+        let collapsible_subitems = collapsible_body.childNodes
+        for (var j = 0; j < collapsible_subitems.length; j++) {
+            let collapsible_subitem = collapsible_subitems[j]
+            collapsible_subitem.removeAttribute('id')
+            let collapsible_input_holder = collapsible_subitem.childNodes[2]
+            let itemsToDisable = collapsible_input_holder.childNodes
+            for (var k = 1; k < itemsToDisable.length; k++) {
+                if (!itemsToDisable[k].disabled) {
+                    itemsToDisable[k].disabled = true
+                    itemsToDisable[k].removeAttribute('id')
+                }
+            }
+
+        }
+
+        let collapsible_header = collapsible_item.childNodes[0]
+        let arrow_div = collapsible_header.childNodes[1]
+        if (arrow_div)
+            arrow_div.remove()
+    }
+}
+
+function cancelCollapsibleOptions() {
+    disableCollapsibleItems()
+    displayMessage('Cancelar', 'user')
+    userMessage('Cancelar')
+    removeDisableBlock()
+}
+
+function addCollapsibleOptions() {
+    let subitems = document.getElementsByClassName('collapsible-subitem')
+    let min_selected = false
+    let selected_items = []
+
+    for (var i = 0; i < subitems.length; i++) {
+        let name = subitems[i].childNodes[0].innerHTML
+        let input = subitems[i].childNodes[2].childNodes[2]
+        if (!input.disabled) {
+            min_selected = true
+            let quantity = parseInt(input.value)
+            if (quantity > 0) {
+                let id = input.getAttribute('id')
+                let code = id.split('-')[2]
+                selected_items.push({
+                    code,
+                    name,
+                    quantity
+                })
+            }
+        }
+    }
+
+    if (min_selected && selected_items.length > 0) {
+        disableCollapsibleItems()
+        showSelectedCollapsibleItems(selected_items)
+        removeDisableBlock()
+    } else {
+        alert('Favor adicione pelo menos um item.')
+    }
+}
+
+function showSelectedCollapsibleItems(selected_items) {
+
+    let div = document.createElement('div')
+    div.setAttribute('class', 'collapsible_reply_div')
+    selected_items.forEach((item) => {
+        let list_div = document.createElement('div')
+        list_div.setAttribute('class', 'collapsible_reply_div_item')
+        let list_title = document.createElement('div')
+        list_title.innerHTML = item.name + '<br>Qtd: ' + item.quantity + '<br>'
+        list_div.append(list_title)
+        div.append(list_div)
+
+    })
+    displayMessage(div, 'user', 'htmlElement')
+    userMessage('', 'selectConditionalSalesItems', selected_items)
+}
+
+function collapsibleToggle(collapsible_item_id) {
+    let collapsible_item = document.getElementById(collapsible_item_id)
+    let open = collapsible_item.getAttribute('open')
+    if (collapsible_item) {
+        let collapsible_body = collapsible_item.childNodes[1]
+        open = open == 'true' ? true : false
+        if (open) {
+            collapsible_body.style.display = 'none'
+        } else {
+            collapsible_body.style.display = 'flex'
+        }
+        collapsible_item.setAttribute('open', !open)
+    }
+}
+
+function addQuantityToItem(input_id) {
+    let input = document.getElementById(input_id)
+    let max = input.getAttribute('max')
+    if (parseInt(input.value) <= parseInt(max)) {
+        input.value = parseInt(input.value) + 1
+    }
+}
+
+function removeQuantityToItem(input_id) {
+    let input = document.getElementById(input_id)
+    if (parseInt(input.value) > 0) {
+        input.value = parseInt(input.value) - 1
     }
 }
 

@@ -328,18 +328,15 @@ const sendToWatson = (params) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               let params = { context: watsonData.context }
               if (result.input && result.input.hasConditionalSales) {
-                result.input.data = CustomMessage(result.userPayload.conditionalSale, 'conditionalSales')
-                // if (result.userPayload.conditionalSale.valueMissingRelease == 0) {
-                  // result.input.quick_replies = new QuickReplies(result.userPayload.conditionalSale, 'conditionalSalesItems')
-                // }
+                result.input.quick_replies = new QuickReplies(result.userPayload.conditionalSales, 'conditionalSales')
               }
               if (result.input) params.input = result.input
               sendToWatson(params).then(data => resolve(data))
             })
             break;
 
-          case "select_conditional_sale":
-            Gera.selectConditionalSale(watsonData).then((result) => {
+          case "select_conditional_sales_items":
+            Gera.selectConditionalSalesItems(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               sendToWatson({
                 context: watsonData.context,

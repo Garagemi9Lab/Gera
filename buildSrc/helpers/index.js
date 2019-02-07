@@ -61,14 +61,28 @@ function QuickReplies(payload, action) {
             ]
             break;
 
-        case "conditionalSalesItems":
+        case "conditionalSales":
             quick_replies = [
                 {
-                    type: 'checklist',
-                    payload: {
-                        listCode: payload.conditionalSaleCode,
-                        listItems: payload.conditionalSaleItems.map(item => ({ name: item.productName, code: item.productCode, price: item.unitPrice, maxQuantity: item.maximumQuantity, unitPoints: item.unitPoints }))
-                    }
+                    type: 'Collapsible-list',
+                    payload: payload.reduce((acc, curr) => {
+                        acc.push({
+                            title: curr.conditionalSaleName,
+                            status: `${curr.liberatedCondition ? 'Liberado' : `Falta ${curr.conditionalSaleType.id == 1 ? 'R$' : ''} ${curr.valueMissingRelease} ${curr.conditionalSaleType.id == 3 ? `produto${curr.valueMissingRelease > 1 ? 's' : ''}` : ''}`}`,
+                            enabled: curr.liberatedCondition,
+                            listCode: curr.conditionalSaleCode,
+                            type: 'Collapsible-item',
+                            listItems: curr.conditionalSaleItems.map((saleItem) => ({
+                                code: saleItem.productCode,
+                                name: saleItem.productName,
+                                maximumQuantity: saleItem.maximumQuantity,
+                                unitPrice: saleItem.unitPrice,
+                                unitPoints: saleItem.unitPoints,
+                                enabled: curr.liberatedCondition
+                            }))
+                        })
+                        return acc
+                    }, [])
                 }
             ]
             break;
@@ -95,7 +109,7 @@ function CustomMessage(payload, action) {
     let customMessage = ''
     switch (action) {
         case 'order':
-            customMessage = `Pedido ${payload.number}<br><br>`
+            customMessage = `Pedido ${payload.number} <br> <br>`
             payload.items.forEach(item => {
                 customMessage += `Cód: ${item.productCode}<br>
                 Nome: ${item.productName}<br>
