@@ -1200,7 +1200,7 @@ const addProductsToCart = watsonData => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 userPayload.order = body
-                delete userMessage.selectedItems
+                delete userPayload.selectedItems
                 resolve({ input: { selectedConditionalSalesItems: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')

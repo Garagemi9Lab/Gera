@@ -413,20 +413,23 @@ function disableCollapsibleItems() {
         let collapsible_item = collapsible_items[i]
         collapsible_item.removeAttribute('id')
         let collapsible_body = collapsible_item.childNodes[1]
-        let collapsible_subitems = collapsible_body.childNodes
-        for (var j = 0; j < collapsible_subitems.length; j++) {
-            let collapsible_subitem = collapsible_subitems[j]
-            collapsible_subitem.removeAttribute('id')
-            let collapsible_input_holder = collapsible_subitem.childNodes[2]
-            let itemsToDisable = collapsible_input_holder.childNodes
-            for (var k = 1; k < itemsToDisable.length; k++) {
-                if (!itemsToDisable[k].disabled) {
-                    itemsToDisable[k].disabled = true
-                    itemsToDisable[k].removeAttribute('id')
-                }
-            }
+        if (collapsible_body)
+            collapsible_body.remove()
 
-        }
+        // let collapsible_subitems = collapsible_body.childNodes
+        // for (var j = 0; j < collapsible_subitems.length; j++) {
+        // let collapsible_subitem = collapsible_subitems[j]
+        // collapsible_subitem.removeAttribute('id')
+        // let collapsible_input_holder = collapsible_subitem.childNodes[2]
+        // let itemsToDisable = collapsible_input_holder.childNodes
+        // for (var k = 1; k < itemsToDisable.length; k++) {
+        // if (!itemsToDisable[k].disabled) {
+        // itemsToDisable[k].disabled = true
+        // itemsToDisable[k].removeAttribute('id')
+        // }
+        // }
+
+
 
         let collapsible_header = collapsible_item.childNodes[0]
         let arrow_div = collapsible_header.childNodes[1]
