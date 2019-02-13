@@ -17,12 +17,12 @@ function expiredToken(watsonData) {
     })
 }
 
-const getToken = (user) => {
+const getToken = (user, client_id, client_secret) => {
     console.log('Get token method invoked..')
     return new Promise((resolve, reject) => {
         const formData = {
-            client_id: process.env.CLIENT_ID,
-            client_secret: process.env.CLIENT_SECRET,
+            client_id: client_id || process.env.CLIENT_ID,
+            client_secret: client_secret || process.env.CLIENT_SECRET,
             username: user.username.toString(),
             password: user.password.toString(),
             grant_type: 'password'
@@ -42,7 +42,8 @@ const getToken = (user) => {
                     let payload = {
                         user: {
                             id: body.user_id,
-                            username: body.user_name
+                            username: body.user_name,
+                            password: user.password.toString()
                         },
                         token: {
                             value: body.access_token,
@@ -153,6 +154,46 @@ const checkSystemParameters = (watsonData) => {
                 console.log('Error on check system parameters')
                 reject({ err: body, statusCode: response.statusCode })
             }
+        })
+    })
+}
+
+const checkOverDueInstallments = (watsonData) => {
+    console.log('Check OverDue Installments method invoked')
+    return new Promise((resolve, reject) => {
+        console.log('Get specific token for client id: ' + process.env.INSTALLMENTS_CLIENT_ID)
+        let userPayload = watsonData.context.userPayload
+        let user = {
+            username: userPayload.user.username,
+            password: userPayload.user.password
+        }
+        let client_id = process.env.INSTALLMENTS_CLIENT_ID
+        let client_secret = process.env.INSTALLMENTS_SECRET_ID
+        getToken(user, client_id, client_secret).then((data) => {
+            const options = {
+                method: 'GET',
+                uri: `${URL}/api/Installments?representativeCode=${userPayload.user.id}&open=true&overdue=true`,
+                headers: {
+                    "authorization": `Bearer ${data.token.value}`,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+            }
+
+            request(options, (error, response, body) => {
+                if (!error && response && response.statusCode == 200) {
+                    body = JSON.parse(body)
+                    userPayload.installments = body
+                    resolve({ userPayload, input: { hasInstallments: true } })
+                } else if (response && response.statusCode === 404) {
+                    console.log("There is no overdue installments")
+                    resolve({ userPayload, input: { hasInstallments: false } })
+                } else {
+                    console.log("An error occurred on getting user installments")
+                    reject(body)
+                }
+            })
+
         })
     })
 }
@@ -477,7 +518,7 @@ const createNewOrder = (watsonData) => {
             if (!error && response.statusCode === 201) {
                 userPayload.order = body
                 console.log(`Order created successfully with number ${body.number}`)
-                resolve({ userPayload , input:{ action: 'newOrder'} })
+                resolve({ userPayload, input: { action: 'newOrder' } })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token..: check it..')
                 expiredToken(watsonData).then(result => resolve(result))
@@ -1257,6 +1298,7 @@ module.exports = {
     getToken,
     checkUserInformations,
     checkSystemParameters,
+    checkOverDueInstallments,
     checkOpenOrders,
     getBusinessModels,
     getBusinessModelDeliveryMode,

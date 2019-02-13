@@ -87,7 +87,7 @@ const sendToWatson = (params) => {
               let params = { context: watsonData.context }
               if (result.userPayload.parameters) {
                 params.input = {
-                  action: 'checkOpenOrders'
+                  action: 'checkOverDueInstallments'
                 }
               }
               sendToWatson(
@@ -96,6 +96,15 @@ const sendToWatson = (params) => {
             }).catch(err => {
               console.log("Error on checking system parameters")
               console.log(err)
+            })
+            break;
+
+          case "check_overdue_installments":
+            Gera.checkOverDueInstallments(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, result.userPayload)
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
             })
             break;
 
