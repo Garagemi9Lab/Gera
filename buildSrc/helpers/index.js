@@ -132,7 +132,7 @@ function QuickReplies(payload, action) {
                 {
                     type: 'accept-text',
                     payload: {
-                        text: `${payload['installments'].map(item => (`<span>Parc. ${item.parcelNumber}</span><span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}<br><hr><span>${payload['discount'] && payload['discount'] > 0 ? `Desconto: ${payload['discount']}` : 'Sem desconto'}</span><br>`,
+                        text: `${payload['installments'].map(item => (`<span>Parc. ${item.parcelNumber}</span><span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}<br><hr>${payload['discount'] && payload['discount'] > 0 ? `<span>Desconto: ${payload['discount']}</span>` : ''}<br>`,
                         buttons: [
                             {
                                 title: 'Cancelar',
