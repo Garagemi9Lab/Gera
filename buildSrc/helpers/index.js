@@ -99,6 +99,59 @@ function QuickReplies(payload, action) {
                 return acc
             }, [])
             break;
+
+        case "installments":
+            quick_replies = Object.keys(payload).reduce((acc, curr) => {
+                acc.push({
+                    title: `Pedido número: ${curr}`,
+                    type: 'postback_list_button',
+                    payload: {
+                        value: `<code>${curr}`,
+                        items: payload[curr]
+                    }
+                })
+                return acc
+            }, [])
+            break;
+
+        case "renegotiationPaymentPlans":
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: curr.description,
+                    type: 'postback_button',
+                    payload: {
+                        value: `<code>${curr.code}`
+                    }
+                })
+                return acc
+            }, [])
+            break;
+
+        case "simulatedInstallments":
+            quick_replies = [
+                {
+                    type: 'accept-text',
+                    payload: {
+                        text: `${payload['installments'].map(item => (`<span>Parc. ${item.parcelNumber}</span><span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}<br><hr><span>${payload['discount'] && payload['discount'] > 0 ? `Desconto: ${payload['discount']}` : 'Sem desconto'}</span><br>`,
+                        buttons: [
+                            {
+                                title: 'Cancelar',
+                                payload: {
+                                    value: 'Cancelar'
+                                }
+                            },
+                            {
+                                title: 'Renegociar',
+                                payload: {
+                                    value: 'Renegociar'
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+            break;
+
     }
 
     return quick_replies

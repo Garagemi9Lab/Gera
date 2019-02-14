@@ -170,6 +170,7 @@ const checkOverDueInstallments = (watsonData) => {
         let client_id = process.env.INSTALLMENTS_CLIENT_ID
         let client_secret = process.env.INSTALLMENTS_SECRET_ID
         getToken(user, client_id, client_secret).then((data) => {
+            userPayload.user.renegotiationToken = data.token.value
             const options = {
                 method: 'GET',
                 uri: `${URL}/api/Installments?representativeCode=${userPayload.user.id}&open=true&overdue=true`,
@@ -195,6 +196,159 @@ const checkOverDueInstallments = (watsonData) => {
             })
 
         })
+    })
+}
+
+const getInstallments = (watsonData) => {
+    console.log('Get installments method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let installments = userPayload.installments
+        let filtredInstallments = installments.reduce((acc, curr) => {
+            let orderNumber = curr.orderingNumber
+            if (!acc[orderNumber]) acc[orderNumber] = []
+            acc[orderNumber].push(curr)
+            return acc
+        }, {})
+
+        if (filtredInstallments) {
+            userPayload.installments = filtredInstallments
+            resolve({ userPayload, input: { action: 'showInstallments' } })
+        } else {
+            reject()
+        }
+    })
+}
+
+const selectInstallment = (watsonData) => {
+    console.log('Select installments method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selectedInstallment = watsonData.output['selected_installment']
+        let installment = userPayload.installments[selectedInstallment]
+        delete userPayload.installments
+        if (installment) {
+            userPayload.installment = installment
+            watsonData.context.userPayload = userPayload
+            getDebitRenegotiationPaymentPlans(watsonData).then(resolve)
+        } else {
+            reject()
+        }
+    })
+}
+
+const getDebitRenegotiationPaymentPlans = (watsonData) => {
+    console.log('Get debit renegotiation payment plans method invoked')
+    return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+        let installment = userPayload.installment
+        let order_id = installment[0]['orderingNumber']
+
+        let query = `titlesRequest.selectedTitles%5B%5D=${installment.map(item => (item.number)).join('&titlesRequest.selectedTitles%5B%5D=')}`
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/orders/${order_id}/debitRenegotiation/paymentPlans?${query}`,
+            headers: {
+                "authorization": `Bearer ${userPayload.user.renegotiationToken}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode === 200) {
+                body = JSON.parse(body)
+                // Filter where renegotiationPaymentPlan == SIM
+                body = body.filter((plan) => plan.renegotiationPaymentPlan.id == 1)
+                userPayload.renegotiationPaymentPlans = body
+                resolve({ userPayload, input: { action: 'showRenegotiationPaymentPlans' } })
+            } else {
+                console.log('An error occurred on getting debit payment plans')
+                reject()
+            }
+        })
+
+    })
+}
+
+const selectRenegotiationPaymentPlan = (watsonData) => {
+    console.log('Select renegotiation payment plan method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selected_plan = watsonData.output.selected_plan
+        let plan = userPayload.renegotiationPaymentPlans.find((element) => element.code == selected_plan)
+        if (plan) {
+            let installment = userPayload.installment
+            let order_id = installment[0]['orderingNumber']
+
+            let query = `titlesRequest.selectedTitles%5B%5D=${installment.map(item => (item.number)).join('&titlesRequest.selectedTitles%5B%5D=')}`
+
+            const options = {
+                method: 'GET',
+                uri: `${URL}/api/orders/${order_id}/installments/renegotiationParcelSimulation?paymentPlan=${plan.code}&${query}`,
+                headers: {
+                    "authorization": `Bearer ${userPayload.user.renegotiationToken}`,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                }
+            }
+
+            request(options, (error, response, body) => {
+                if (!error && response && response.statusCode == 200) {
+                    body = JSON.parse(body)
+                    delete userPayload.renegotiationPaymentPlans
+                    userPayload.renegotiationPlan = plan
+                    userPayload.simulatedInstallments = body
+                    resolve({ userPayload, input: { action: 'showSimulatedPlan' } })
+                } else {
+                    console.log('Error on selecting renegotiation payment plan')
+                    reject()
+                }
+            })
+
+        }
+
+    })
+}
+
+const makeRenegotiation = (watsonData) => {
+    console.log('Make renegotiation method invoked')
+    return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+        let installment = userPayload.installment
+        let order_id = installment[0]['orderingNumber']
+        let paymentPlan = userPayload['renegotiationPlan']['code']
+        let parcels = `titlesRequest.selectedTitles%5B%5D=${installment.map(item => (item.number)).join('&titlesRequest.selectedTitles%5B%5D=')}`
+        let query = `id=${order_id}&paymentPlan=${paymentPlan}&${parcels}`
+
+        const options = {
+            method: 'POST',
+            uri: `${URL}/api/installments/renegociation?${query}`,
+            headers: {
+                "authorization": `Bearer ${userPayload.user.renegotiationToken}`,
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                console.log(JSON.stringify(body))
+                delete userPayload.installment
+                delete userPayload.renegotiationPlan
+                delete userPayload.simulatedInstallments
+                resolve({ userPayload, input: { madeRenegotiation: true } })
+            } else {
+                console.log('Error on making renegotiation')
+                console.log(response.statusCode)
+                console.log(body)
+                reject()
+            }
+        })
+
     })
 }
 
@@ -1299,6 +1453,10 @@ module.exports = {
     checkUserInformations,
     checkSystemParameters,
     checkOverDueInstallments,
+    getInstallments,
+    selectInstallment,
+    selectRenegotiationPaymentPlan,
+    makeRenegotiation,
     checkOpenOrders,
     getBusinessModels,
     getBusinessModelDeliveryMode,

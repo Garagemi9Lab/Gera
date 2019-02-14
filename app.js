@@ -101,7 +101,54 @@ const sendToWatson = (params) => {
 
           case "check_overdue_installments":
             Gera.checkOverDueInstallments(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result.userPayload)
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
+            })
+            break;
+
+          case "get_installments":
+            Gera.getInstallments(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                action: result.input.action,
+                quick_replies: new QuickReplies(watsonData.context.userPayload.installments, 'installments')
+              }
+              sendToWatson(params).then((data) => resolve(data))
+            })
+            break;
+
+          case "select_installment":
+
+            Gera.selectInstallment(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                action: result.input.action,
+                quick_replies: new QuickReplies(watsonData.context.userPayload.renegotiationPaymentPlans, 'renegotiationPaymentPlans')
+              }
+              sendToWatson(params).then((data) => resolve(data))
+
+            })
+            break;
+
+          case "select_renegotiation_payment_plan":
+            Gera.selectRenegotiationPaymentPlan(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                action: result.input.action,
+                quick_replies: new QuickReplies(watsonData.context.userPayload.simulatedInstallments, 'simulatedInstallments')
+              }
+              sendToWatson(params).then((data) => resolve(data))
+            })
+            break;
+
+          case "make_renegotiation":
+            Gera.makeRenegotiation(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               let params = { context: watsonData.context }
               if (result.input) params.input = result.input
               sendToWatson(params).then((data) => resolve(data))

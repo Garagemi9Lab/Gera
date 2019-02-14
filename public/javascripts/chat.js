@@ -396,6 +396,42 @@ function QuickReplyElement(quick_reply) {
 
             return collapsible_holder
 
+        case "postback_list_button":
+            let button_list = document.createElement('div')
+            button_list.setAttribute('class', 'quick_reply_btn postback_list_item')
+            button_list.setAttribute('quick_reply_type', quick_reply.type)
+            button_list.setAttribute('hidden_value', quick_reply.payload.value)
+            let message = quick_reply.title + '<br>'
+            quick_reply.payload.items.forEach((item) => {
+                let date = item.expirationDate.split('T')[0].split('-').reverse().join('/')
+                message += '- Parc. ' + item.openBalance + ' - Venc. ' + date + '<br>'
+            })
+            button_list.innerHTML = message
+            return button_list
+
+        case 'accept-text':
+            let accept_div = document.createElement('div')
+            accept_div.setAttribute('class', 'accept_text_div')
+
+            let content_div = document.createElement('div')
+            content_div.setAttribute('class', 'accept_text_content_div')
+            content_div.innerHTML = quick_reply.payload.text
+
+            accept_div.append(content_div)
+
+            let buttons_div = document.createElement('div')
+            buttons_div.setAttribute('class', 'accept_text_buttons_div')
+            quick_reply.payload.buttons.forEach((button) => {
+                let btn_element = document.createElement('button')
+                btn_element.setAttribute('class', 'accept_text_button')
+                btn_element.innerHTML = button.title
+                btn_element.onclick = function () { replyFromButton() }
+                buttons_div.append(btn_element)
+            })
+
+            accept_div.append(buttons_div)
+            return accept_div
+
 
         default:
             let button = document.createElement('button')
@@ -404,6 +440,24 @@ function QuickReplyElement(quick_reply) {
             button.setAttribute('hidden_value', quick_reply.payload.value)
             button.innerHTML = quick_reply.title
             return button
+    }
+}
+
+function replyFromButton(event) {
+    if (!event) event = window.event
+    if (event) {
+        let button = event.target
+        let text = button.innerHTML
+        disableElementsByClassName(button.getAttribute('class'))
+        displayMessage(text, 'user')
+        userMessage(text)
+    }
+}
+
+function disableElementsByClassName(className) {
+    let elements = document.getElementsByClassName(className)
+    for (var i = 0; i < elements.length; i++) {
+        if (!elements[i].disabled) elements[i].disabled = true
     }
 }
 
