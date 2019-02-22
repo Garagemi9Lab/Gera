@@ -48,18 +48,21 @@ app.post('/message', (req, res) => {
   // Check for first message
   let params = req.body
   if (Object.keys(params.context).length == 0) {
-    Gera.getToken(params.loggedUser).then((result) => {
-      params.context.userPayload = result
-      sendToWatson(params).then((watsonData) => res.status(200).json(watsonData))
-    })
-  } else {
-    sendToWatson(req.body).then((watsonData) => {
-      res.status(200).json(watsonData)
-    }).catch((error) => {
-      console.log('Error')
-      console.log(error)
-    })
+    params.context = {
+      userPayload: {
+        user: params.loggedUser,
+        tokens: {}
+      },
+      timezone: "America/Sao_Paulo"
+    }
+    params.input.action = 'startChat'
   }
+  sendToWatson(params).then((watsonData) => {
+    res.status(200).json(watsonData)
+  }).catch((error) => {
+    console.log('Error')
+    console.log(error)
+  })
 })
 
 const sendToWatson = (params) => {
@@ -68,6 +71,29 @@ const sendToWatson = (params) => {
     Bot.sendMessage(params).then((watsonData) => {
       if (watsonData.output && watsonData.output.action) {
         switch (watsonData.output.action) {
+
+          case "get_order_token":
+            Gera.getOrderToken(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
+            })
+            break;
+
+          case "get_renegotiation_token":
+            Gera.getRenegotiationToken(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
+            })
+            break;
+
+          case "get_SAC_token":
+
+            Gera.getSACToken(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
+            })
+            break;
+
           case "check_user_informations":
             Gera.checkUserInformations(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
