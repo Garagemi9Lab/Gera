@@ -437,6 +437,52 @@ const sendToWatson = (params) => {
               }).then(data => resolve(data))
             })
             break;
+
+          case "get_notification_structures_parent":
+            Gera.getNotificationStructuresParents(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                hasNotificationStructures: result.input.hasNotificationStructures,
+              }
+
+              if (params.input.hasNotificationStructures == true) {
+                params.input.quick_replies = new QuickReplies(result.userPayload.notificationStructuresParents, 'notificationStructuresParents')
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "select_notification_parent":
+            Gera.selectNotificationStructureParent(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+
+              if (result.input.selectedNotifications == true) {
+                params.input.quick_replies = new QuickReplies(result.userPayload.selectedNotificationParent, 'selectedNotificationParent')
+              }
+
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "get_leaf_notification_structures":
+            Gera.getLeafNotificationStructures(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = {
+                hasLeafSuggestions: result.input.hasLeafSuggestions
+              }
+
+              if (result.input.hasLeafSuggestions == true) {
+                params.input.quick_replies = new QuickReplies(result.userPayload.selectedNotificationsLeaf, 'selectedNotificationsLeaf')
+              }
+
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           default:
             resolve(watsonData)
             break;

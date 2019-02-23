@@ -117,7 +117,7 @@ const getRenegotiationToken = (watsonData) => {
             userPayload.tokens.renegotiation = data.token
             resolve({ userPayload })
         }).catch((err) => {
-            console.log('Error on getting orger token')
+            console.log('Error on getting Renegotiation token')
             console.log(err)
             reject(err)
         })
@@ -1509,18 +1509,102 @@ const getSACToken = (watsonData) => {
     console.log('Get SAC Token method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        let client_id = process.env.INSTALLMENTS_CLIENT_ID
-        let client_secret = process.env.INSTALLMENTS_SECRET_ID
+        let client_id = process.env.SAC_CLIENT_ID
+        let client_secret = process.env.SAC_SECRET_ID
         getToken(userPayload.user, client_id, client_secret).then((data) => {
             userPayload.user = data.user
             userPayload.tokens.sac = data.token
             resolve({ userPayload })
         }).catch((err) => {
-            console.log('Error on getting orger token')
+            console.log('Error on getting SAC token')
             console.log(err)
             reject(err)
         })
 
+    })
+}
+
+const getNotificationStructuresParents = (watsonData) => {
+    console.log('Get notification structures parents method invoked')
+    return new Promise((resolve, reject) => {
+        getNotificationStructuresWithOptions(watsonData, false)
+            .then((notificationStructures) => {
+                let userPayload = watsonData.context.userPayload
+                userPayload.notificationStructuresParents = notificationStructures
+                resolve({ userPayload, input: { hasNotificationStructures: true } })
+            })
+    })
+}
+
+const getNotificationStructuresWithOptions = (watsonData, isLeaf) => {
+    return new Promise((resolve, reject) => {
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/notificationStructures?isLeaf=${isLeaf}&classificationCode=2`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode === 200) {
+                body = JSON.parse(body)
+                resolve(body)
+            } else {
+                console.log('An error occurred while getting notification structures')
+                console.log(error)
+                console.log(body)
+                reject(error)
+            }
+        })
+    })
+}
+
+const selectNotificationStructureParent = (watsonData) => {
+    console.log('Select notification structure Parent')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selectedNotificationParent = watsonData.output.selected_notification
+        let selectedNotifications = userPayload.notificationStructuresParents.reduce((acc, curr) => {
+            if (curr.parent && curr.parent.code == selectedNotificationParent
+                || (curr.code == selectedNotificationParent && curr.code == 2)
+            ) {
+                acc.push(curr)
+            }
+            return acc
+        }, [])
+
+        delete userPayload.notificationStructuresParents
+        userPayload.selectedNotificationParent = selectedNotifications
+
+
+        if (selectedNotifications.length == 1 && selectedNotifications[0].code == 2) {
+            resolve({ userPayload, input: { selectedNotifications: true, skipSubParents: true, text: `<code>${selectedNotificationParent}` } })
+        } else {
+            resolve({ userPayload, input: { selectedNotifications: true, skipSubParents: false } })
+        }
+
+
+    })
+}
+
+const getLeafNotificationStructures = (watsonData) => {
+    console.log('Get leaf notification structures method invoked')
+    return new Promise((resolve, reject) => {
+        getNotificationStructuresWithOptions(watsonData, true)
+            .then((notificationStructures) => {
+                let userPayload = watsonData.context.userPayload
+                let selected_parent = watsonData.output.selected_parent
+
+                let notifications = notificationStructures.reduce((acc, curr) => {
+                    if (curr.parent && curr.parent.code == selected_parent) {
+                        acc.push(curr)
+                    }
+                    return acc
+                }, [])
+
+                userPayload.selectedNotificationsLeaf = notifications
+                delete userPayload.selectedNotificationParent
+                resolve({ userPayload, input: { hasLeafSuggestions: true } })
+            })
     })
 }
 
@@ -1561,5 +1645,8 @@ module.exports = {
     checkConditionalSales,
     selectConditionalSalesItems,
     checkAddresses,
-    getSACToken
+    getSACToken,
+    getNotificationStructuresParents,
+    selectNotificationStructureParent,
+    getLeafNotificationStructures
 }

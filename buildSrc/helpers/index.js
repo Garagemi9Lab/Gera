@@ -152,6 +152,47 @@ function QuickReplies(payload, action) {
             ]
             break;
 
+        case "notificationStructuresParents":
+            quick_replies = payload.reduce((acc, curr) => {
+                if (curr.levelCode == 1) {
+                    acc.push({
+                        title: curr.name,
+                        type: 'postback_button',
+                        payload: {
+                            value: '<code>' + curr.code
+                        }
+                    })
+                }
+                return acc
+            }, [])
+            break;
+
+        case "selectedNotificationParent":
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: curr.name,
+                    type: 'postback_button',
+                    payload: {
+                        value: '<code>' + curr.code
+                    }
+                })
+                return acc
+            }, [])
+            break;
+
+        case "selectedNotificationsLeaf":
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: curr.name,
+                    type: 'postback_button',
+                    payload: {
+                        value: '<code>' + curr.code
+                    }
+                })
+                return acc
+            }, [])
+            break;
+
     }
 
     return quick_replies
