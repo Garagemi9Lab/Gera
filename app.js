@@ -297,8 +297,8 @@ const sendToWatson = (params) => {
             Gera.checkProductReplacement(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               let params = { context: watsonData.context }
-              if (result.input && result.input.hasSubstitutes) result.input.data = CustomMessage(result.userPayload.substitutions, 'substitutions')
               if (result.input) params.input = result.input
+              if (result.input && result.input.hasSubstitutes && result.input.hasSubstitutes == true) result.input.data = CustomMessage(result.userPayload.substitutions, 'substitutions')
               sendToWatson(params).then((data) => resolve(data))
             })
             break;
@@ -479,6 +479,33 @@ const sendToWatson = (params) => {
                 params.input.quick_replies = new QuickReplies(result.userPayload.selectedNotificationsLeaf, 'selectedNotificationsLeaf')
               }
 
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "create_notification_sac":
+            Gera.createNotificationSAC(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "get_notification_questions":
+            Gera.getNotificationQuestions(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "answer_SAC_questions":
+            Gera.answerSACQuestions(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
               sendToWatson(params).then(data => resolve(data))
             })
             break;

@@ -103,7 +103,7 @@ function QuickReplies(payload, action) {
         case "installments":
             quick_replies = Object.keys(payload).reduce((acc, curr) => {
                 acc.push({
-                    title: `Pedido número: ${curr}`,
+                    title: `Pedido: ${curr}`,
                     type: 'postback_list_button',
                     payload: {
                         value: `<code>${curr}`,
@@ -117,7 +117,7 @@ function QuickReplies(payload, action) {
         case "renegotiationPaymentPlans":
             quick_replies = payload.reduce((acc, curr) => {
                 acc.push({
-                    title: curr.description,
+                    title: getRenegotiationDescriptionByCode(curr),
                     type: 'postback_button',
                     payload: {
                         value: `<code>${curr.code}`
@@ -132,7 +132,7 @@ function QuickReplies(payload, action) {
                 {
                     type: 'accept-text',
                     payload: {
-                        text: `${payload['installments'].map(item => (`<span>Parc. ${item.parcelNumber}</span><span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}<br><hr>${payload['discount'] && payload['discount'] > 0 ? `<span>Desconto: ${payload['discount']}</span>` : ''}<br>`,
+                        text: getSimulatedInstallmentsText(payload),
                         buttons: [
                             {
                                 title: 'Cancelar',
@@ -238,6 +238,52 @@ function CustomMessage(payload, action) {
             break;
     }
     return customMessage
+}
+
+function getSimulatedInstallmentsText(payload) {
+    return `${payload['installments'].map(item => (
+        `<span>${payload['installments'].length == 1 ? 'Parc. única' : `${item.parcelNumber}ª Parc.:`}</span>
+        <span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}
+        <br>
+        <hr>
+        ${payload['discount'] && payload['discount'] > 0 ?
+            `<span>Desconto: ${payload['discount']}</span>` :
+            ''}
+        <br>`
+}
+
+function getRenegotiationDescriptionByCode(item) {
+    switch (item.code) {
+        case 3:
+            return 'Renegociação: Parcela única para 30 dias.'
+        case 26: 
+            return 'Renegociação: inadimplentes (15 e 45 dias).'
+        case 27: 
+            return 'Renegociação à vista.'
+        case 28:
+            return 'Renegociação: 15 - 30 – 45 dias.'
+        case 55:
+            return 'Renegociação em 4 Parcelas.'
+        case 56: 
+            return 'Renegociação em 5 Parcelas.'
+        case 57: 
+            return 'Renegociação em 6 Parcelas.'
+        case 58:
+            return 'Renegociação em 7 Parcelas.'
+        case 59:
+            return 'Renegociação em 8 Parcelas.'
+        case 60:
+            return 'Renegociação em 9 Parcelas.'
+        case 61: 
+            return 'Renegociação em 10 Parcelas.'
+        case 62: 
+            return 'Renegociação em 11 Parcelas.'
+        case 63: 
+            return 'Renegociação em 12 Parcelas.'
+
+        default:
+            return item.description
+    }
 }
 
 

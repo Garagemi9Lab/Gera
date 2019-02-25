@@ -883,7 +883,7 @@ const checkProductSubstitute = (watsonData) => {
                 resolve({ input: { hasSubstitutes: true }, userPayload })
             } else if (response.statusCode === 404) {
                 console.log(JSON.stringify(body, null, 2))
-                resolve({ input: { hasSubstitutes: false } })
+                resolve({ input: { hasSubstitutes: false }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
@@ -1608,6 +1608,85 @@ const getLeafNotificationStructures = (watsonData) => {
     })
 }
 
+const createNotificationSAC = (watsonData) => {
+    console.log('Create Notification SAC method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let user_id = userPayload.user.id
+        let selected_notification = watsonData.output.selected_notification
+        delete userPayload.selectedNotificationsLeaf
+        const options = {
+            method: 'POST',
+            uri: `${URL}/api/notifications?peopleCode=${user_id}&code=${selected_notification}&origin=${process.env.SAC_CREATE_ORIGIN}`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                userPayload.SAC = {
+                    notificationId: body.notificationId
+                }
+
+                resolve({ userPayload, input: { notificationCreated: true } })
+
+            } else {
+                console.log('An error ocurred while create a new notification SAC')
+                console.log(error)
+                reject(error)
+            }
+        })
+    })
+}
+
+const getNotificationQuestions = (watsonData) => {
+    console.log('Get notification questions method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let notificationId = userPayload.SAC.notificationId
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/Notification/${notificationId}/questions`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                userPayload.SAC.questions = body.questions || []
+                userPayload.SAC.questionsIndex = 0
+
+                resolve({ userPayload, input: { hasQuestions: true } })
+            } else {
+                console.log('Error on getting notification questions')
+                console.log(error)
+                reject(error)
+            }
+        })
+    })
+}
+
+const answerSACQuestions = (watsonData) => {
+    console.log('Answer SAC Questions mehtod invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let answer = watsonData.output.answer
+        let questionsIndex = userPayload.SAC.questionsIndex
+        let questions = userPayload.SAC.questions
+        questions[questionsIndex]['answer'] = answer
+        userPayload.SAC.questionsIndex = questionsIndex + 1
+        userPayload.SAC.questions = questions
+
+        if (userPayload.SAC.questionsIndex == userPayload.SAC.questions.length) {
+            resolve({ userPayload, input: { questionAnsweredFinished: true } })
+        } else {
+            resolve({ userPayload, input: { questionAnswered: true } })
+        }
+
+
+    })
+}
+
 
 module.exports = {
     getToken,
@@ -1648,5 +1727,8 @@ module.exports = {
     getSACToken,
     getNotificationStructuresParents,
     selectNotificationStructureParent,
-    getLeafNotificationStructures
+    getLeafNotificationStructures,
+    createNotificationSAC,
+    getNotificationQuestions,
+    answerSACQuestions
 }
