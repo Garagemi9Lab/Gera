@@ -467,18 +467,20 @@ const getBusinessModels = (watsonData) => {
             headers: new RequestHeaders(watsonData, ORDER)
         }
 
+        let userPayload = watsonData.context.userPayload
+
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                let userPayload = watsonData.context.userPayload
+                
                 userPayload.businessModels = body || null
                 resolve({ userPayload, input: { hasBusinessModels: true } })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token..: check it..')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
             } else {
-                console.log('Error in getting business models')
-                reject({ err: body })
+                console.log('Error on getting business models')
+                resolve({ input: { errorMessage: body.message || 'Um erro ocorreu, tente novamente' }, userPayload })
             }
         })
     })
@@ -1503,6 +1505,31 @@ const checkAddresses = (watsonData) => {
     })
 }
 
+const redirectToCart = (watsonData) => {
+    console.log('Redirect to cart method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+
+        const options = {
+            method: 'POST',
+            uri: `${URL}/api/AccessKey`,
+            headers: new RequestHeaders(watsonData, ORDER)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                userPayload.user.redirectLink = `<a href="https://qanovocarrinhojequiti.geravd.com.br/External/Login.ashx?token=${body.accessKey}&login=${userPayload.user.id}" target="_blank">Continuar no carrinho</a>`
+                resolve({ userPayload, input: { redirect: true } })
+            } else {
+                console.log('Error on getting accessKey')
+                console.log(error)
+                reject(error)
+            }
+        })
+    })
+}
+
 // SAC 
 
 const getSACToken = (watsonData) => {
@@ -1724,6 +1751,7 @@ module.exports = {
     checkConditionalSales,
     selectConditionalSalesItems,
     checkAddresses,
+    redirectToCart,
     getSACToken,
     getNotificationStructuresParents,
     selectNotificationStructureParent,

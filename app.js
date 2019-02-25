@@ -197,9 +197,10 @@ const sendToWatson = (params) => {
 
           case "get_business_models":
             Gera.getBusinessModels(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result)
+              watsonData.context = Object.assign({}, watsonData.context, result.userPayload)
               let params = { context: watsonData.context }
-              if (result.input) params.input = {
+              if (result.input) params.input = result.input
+              if (result.input && result.input.hasBusinessModels) params.input = {
                 action: 'showBusinessModels',
                 quick_replies: new QuickReplies(result.userPayload.businessModels, 'businessModels')
               }
@@ -435,6 +436,15 @@ const sendToWatson = (params) => {
                 context: watsonData.context,
                 input: result.input
               }).then(data => resolve(data))
+            })
+            break;
+
+          case "redirect_to_external_cart":
+            Gera.redirectToCart(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 
