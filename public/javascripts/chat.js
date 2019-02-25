@@ -33,7 +33,9 @@ function userMessage(message, action, data) {
     xhrPost('/message', params, function (data) {
         removeTyping()
         console.log(JSON.stringify(data, null, 2))
-        if (!promotionLoaded && data.context.userPayload.token && data.context.userPayload.order) {
+        if (!promotionLoaded && data.context.userPayload.tokens
+            && data.context.userPayload.tokens.order && data.context.userPayload.tokens.order.valid
+            && data.context.userPayload.order) {
             getPromotions(data);
             promotionLoaded = true
         }
@@ -404,7 +406,7 @@ function QuickReplyElement(quick_reply) {
             let message = quick_reply.title + '<br>'
             quick_reply.payload.items.forEach((item) => {
                 let date = item.expirationDate.split('T')[0].split('-').reverse().join('/')
-                message += '- Parc. ' + item.openBalance + ' - Venc. ' + date + '<br>'
+                message += 'Parc.: R$ ' + item.openBalance + ' / Venc. ' + date + '<br>'
             })
             button_list.innerHTML = message
             return button_list
