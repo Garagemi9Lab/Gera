@@ -193,6 +193,20 @@ function QuickReplies(payload, action) {
             }, [])
             break;
 
+        case "SACNotifications":
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: curr.notificationStructure.description,
+                    type: 'postback_button',
+                    payload: {
+                        value: '<code>' + curr.notificationId
+                    }
+                })
+                return acc
+            }, [])
+
+            break;
+
     }
 
     return quick_replies
@@ -236,6 +250,12 @@ function CustomMessage(payload, action) {
                 }
             })
             break;
+        case 'notificationDetails':
+            customMessage = `
+            <span>${payload.peopleName}</span><br>
+            <span>${payload.notificationStructure.description}</span><br>
+            `
+            break;
     }
     return customMessage
 }
@@ -256,17 +276,17 @@ function getRenegotiationDescriptionByCode(item) {
     switch (item.code) {
         case 3:
             return 'Renegociação: Parcela única para 30 dias.'
-        case 26: 
+        case 26:
             return 'Renegociação: inadimplentes (15 e 45 dias).'
-        case 27: 
+        case 27:
             return 'Renegociação à vista.'
         case 28:
             return 'Renegociação: 15 - 30 – 45 dias.'
         case 55:
             return 'Renegociação em 4 Parcelas.'
-        case 56: 
+        case 56:
             return 'Renegociação em 5 Parcelas.'
-        case 57: 
+        case 57:
             return 'Renegociação em 6 Parcelas.'
         case 58:
             return 'Renegociação em 7 Parcelas.'
@@ -274,11 +294,11 @@ function getRenegotiationDescriptionByCode(item) {
             return 'Renegociação em 8 Parcelas.'
         case 60:
             return 'Renegociação em 9 Parcelas.'
-        case 61: 
+        case 61:
             return 'Renegociação em 10 Parcelas.'
-        case 62: 
+        case 62:
             return 'Renegociação em 11 Parcelas.'
-        case 63: 
+        case 63:
             return 'Renegociação em 12 Parcelas.'
 
         default:

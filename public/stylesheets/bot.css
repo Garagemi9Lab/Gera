@@ -919,7 +919,8 @@ div.head {
     height: 22px;
 }
 
-.collapsible-divider, hr {
+.collapsible-divider,
+hr {
     display: block;
     height: 1px;
     border: 0;
@@ -1036,6 +1037,51 @@ div.head {
 }
 
 .accept_text_button:active {
+    background-color: #757575;
+    color: #fff;
+    border: none;
+    border: 1px solid #fff;
+}
+
+.dates_div {
+    display: flex;
+    flex-direction: column;
+}
+
+.dates_content_div {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 0;
+}
+
+.date_item {
+    display: flex;
+    justify-content: space-between;
+    margin: 5px 0;
+}
+
+.date_item input {
+    margin-left: 5px;
+}
+
+.dates_footer_div{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 0;
+}
+
+.dates_continue_btn {
+    border: none;
+    background-color: transparent;
+    border: 1px solid #000;
+    border-radius: 6px;
+    padding: 6px;
+    outline: none;
+    cursor: pointer;
+}
+
+.dates_continue_btn:active {
     background-color: #757575;
     color: #fff;
     border: none;

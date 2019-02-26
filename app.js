@@ -520,6 +520,31 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "get_notifications_sac":
+            Gera.getSACNotifications(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              if (params.input.hasNotifications && params.input.hasNotifications == true) {
+                params.input.quick_replies = new QuickReplies(watsonData.context.userPayload.SAC.notifications, 'SACNotifications')
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+
+            break;
+
+          case "get_notification_sac_details":
+            Gera.getNotificationSACDetails(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              if (result.input.gotNotificationDetails && result.input.gotNotificationDetails == true) {
+                params.input.data = CustomMessage(result.userPayload.SAC.notificationDetails, 'notificationDetails')
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           default:
             resolve(watsonData)
             break;

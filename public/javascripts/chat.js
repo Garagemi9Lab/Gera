@@ -434,6 +434,48 @@ function QuickReplyElement(quick_reply) {
             accept_div.append(buttons_div)
             return accept_div
 
+        case 'SAC_DATE':
+            let dates_div = document.createElement('div')
+            dates_div.setAttribute('class', 'dates_div')
+
+            let dates_content = document.createElement('div')
+            dates_content.setAttribute('class', 'dates_content_div')
+            quick_reply.payload.items.forEach(item => {
+                let date_item = document.createElement('div')
+                date_item.setAttribute('class', 'date_item')
+
+                let date_label = document.createElement('div')
+                date_label.innerHTML = item.title
+
+                let date_input = document.createElement('input')
+                date_input.setAttribute('type', 'date')
+                date_input.setAttribute('hidden-value', item.key)
+                date_input.setAttribute('class', 'date_input')
+
+                date_item.append(date_label)
+                date_item.append(date_input)
+                dates_content.append(date_item)
+            })
+
+            let dates_footer = document.createElement('div')
+            dates_footer.setAttribute('class', 'dates_footer_div')
+            let dates_continue_btn = document.createElement('button')
+            dates_continue_btn.setAttribute('class', 'dates_continue_btn')
+            dates_continue_btn.innerHTML = 'Continuar'
+            dates_continue_btn.onclick = function () { continueSACDateBtn() }
+            let dates_cancel_btn = document.createElement('button')
+            dates_cancel_btn.setAttribute('class', 'dates_continue_btn')
+            dates_cancel_btn.innerHTML = 'Cancelar'
+            dates_cancel_btn.onclick = function () { cancelSACDateBtn() }
+            dates_footer.append(dates_cancel_btn)
+            dates_footer.append(dates_continue_btn)
+
+            dates_div.append(dates_content)
+            dates_div.append(dates_footer)
+
+            return dates_div
+
+
 
         default:
             let button = document.createElement('button')
@@ -443,6 +485,49 @@ function QuickReplyElement(quick_reply) {
             button.innerHTML = quick_reply.title
             return button
     }
+}
+
+function continueSACDateBtn() {
+    let dates_items = document.getElementsByClassName('date_item')
+    let dates_selected = true
+    let dates = []
+    for (var i = 0; i < dates_items.length; i++) {
+        let input = dates_items[i].childNodes[1]
+        let label = dates_items[i].childNodes[0].innerHTML
+        if (!input.disabled)
+            if (!input.value) dates_selected = false
+            else {
+                dates.push({
+                    key: input.getAttribute('hidden-value'),
+                    value: input.value,
+                    label
+                })
+            }
+    }
+    if (dates_selected) {
+        disableElementsByClassName('date_input')
+        disableElementsByClassName('dates_continue_btn')
+        let text = ''
+        dates.forEach(date => text += date.label + ' : ' + date.value + '<br>')
+        displayMessage(text, 'user')
+        userMessage('', 'selectSACNotificationDate', dates)
+        removeDisableBlock()
+
+    } else {
+        alert('Favor selecione as datas.')
+    }
+}
+
+function cancelSACDateBtn() {
+    disableElementsByClassName('date_input')
+    disableElementsByClassName('dates_continue_btn')
+    displayMessage('Cancelar', 'user')
+    userMessage('Cancelar')
+    removeDisableBlock()
+}
+
+function disableDatesSACInput() {
+
 }
 
 function replyFromButton(event) {

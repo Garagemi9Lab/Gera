@@ -472,7 +472,7 @@ const getBusinessModels = (watsonData) => {
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                
+
                 userPayload.businessModels = body || null
                 resolve({ userPayload, input: { hasBusinessModels: true } })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
@@ -1714,6 +1714,63 @@ const answerSACQuestions = (watsonData) => {
     })
 }
 
+const getSACNotifications = (watsonData) => {
+    console.log('Get Notifications SAC method invoked')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let dates = watsonData.output.dates
+        let initial = dates.filter(date => date.key == 'initial')[0].value
+        let final = dates.filter(date => date.key == 'end')[0].value
+
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/notifications?initialNotificationDate=${initial}&finalNotificationDate=${final}&peopleCode=${userPayload.user.id}`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                if (!userPayload.SAC) userPayload.SAC = {}
+                userPayload.SAC.notifications = body
+                resolve({ userPayload, input: { hasNotifications: true } })
+            } else {
+                console.log('An error occurred while getting notifications SAC')
+                console.log(error)
+                console.log(body)
+                reject(error)
+            }
+        })
+    })
+}
+
+const getNotificationSACDetails = (watsonData) => {
+    console.log('Get notification SAC Details')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let selected_notifications = watsonData.output.selected_notification
+
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/notification/${selected_notifications}`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode) {
+                body = JSON.parse(body)
+                userPayload.SAC.notifications = null
+                userPayload.SAC.notificationDetails = body
+                resolve({ userPayload, input: { gotNotificationDetails: true } })
+            } else {
+                console.log('An error ocurred while getting notification details')
+            }
+        })
+
+
+    })
+}
+
 
 module.exports = {
     getToken,
@@ -1758,5 +1815,7 @@ module.exports = {
     getLeafNotificationStructures,
     createNotificationSAC,
     getNotificationQuestions,
-    answerSACQuestions
+    answerSACQuestions,
+    getSACNotifications,
+    getNotificationSACDetails
 }
