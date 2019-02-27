@@ -4,7 +4,7 @@ function QuickReplies(payload, action) {
         case 'businessModels':
             quick_replies = payload.reduce((acc, curr) => {
                 acc.push({
-                    title: curr.name,
+                    title: getBusinessModelNameByCode(curr),
                     type: 'postback_button',
                     payload: {
                         value: '<code>' + curr.code
@@ -196,7 +196,8 @@ function QuickReplies(payload, action) {
         case "SACNotifications":
             quick_replies = payload.reduce((acc, curr) => {
                 acc.push({
-                    title: curr.notificationStructure.description,
+                    // title: `${curr.notificationStructure.description.split('/')[curr.notificationStructure.description.split('/').length - 1]}<br>aberto em: ${curr.notificationDate.split('T')[0].split('-').reverse().join('/')} as ${curr.notificationDate.split('T')[1].split('.')[0]}`,
+                    title: `${curr.notificationStructure.description.split('/')[curr.notificationStructure.description.split('/').length - 1]}<br>aberto em: ${curr.notificationDate.split('T')[0].split('-').reverse().join('/')}`,
                     type: 'postback_button',
                     payload: {
                         value: '<code>' + curr.notificationId
@@ -258,6 +259,15 @@ function CustomMessage(payload, action) {
             break;
     }
     return customMessage
+}
+
+function getBusinessModelNameByCode(businessModel) {
+    switch (businessModel.code) {
+        case 33:
+            return 'Resgate Baú – cliente / CJ'
+        default:
+            return businessModel.name
+    }
 }
 
 function getSimulatedInstallmentsText(payload) {
