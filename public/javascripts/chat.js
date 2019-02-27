@@ -508,8 +508,8 @@ function continueSACDateBtn() {
         disableElementsByClassName('date_input')
         disableElementsByClassName('dates_continue_btn')
         let text = ''
-        dates.forEach(date => text += date.label + ' : ' + date.value + '<br>')
-        displayMessage(text, 'user')
+        // dates.forEach(date => text += date.label + ' : ' + date.value + '<br>')
+        // displayMessage(text, 'user')
         userMessage('', 'selectSACNotificationDate', dates)
         removeDisableBlock()
 
