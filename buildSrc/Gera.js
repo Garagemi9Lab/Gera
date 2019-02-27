@@ -1734,10 +1734,13 @@ const getSACNotifications = (watsonData) => {
                 if (!userPayload.SAC) userPayload.SAC = {}
                 userPayload.SAC.notifications = body
                 resolve({ userPayload, input: { hasNotifications: true } })
+            } else if (response && response.statusCode == 404) {
+                resolve({ userPayload, input: { hasNotifications: false } })
             } else {
                 console.log('An error occurred while getting notifications SAC')
                 console.log(error)
                 console.log(body)
+                console.log(response.statusCode)
                 reject(error)
             }
         })
