@@ -467,6 +467,8 @@ const getBusinessModels = (watsonData) => {
             headers: new RequestHeaders(watsonData, ORDER)
         }
 
+        console.log(JSON.stringify(options, null, 2))
+
         let userPayload = watsonData.context.userPayload
 
         request(options, (error, response, body) => {
@@ -701,7 +703,7 @@ const selectKit = (watsonData) => {
     })
 }
 
-const createNewOrder = (watsonData) => {
+const createNewOrder = (watsonData, recursiveError) => {
     console.log('Creating a new Order method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
@@ -735,7 +737,11 @@ const createNewOrder = (watsonData) => {
                 console.log('Expired token..: check it..')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
             } else if (response && response.statusCode === 400) {
-                resolve({ input: { errorMessage: body.message || 'Um erro ocorreu, tente novamente' }, userPayload })
+                if (body.message.trim() == "Selecione o(s) item(s) a ser(em) incorporado(s) ao pedido." && !recursiveError) {
+                    console.log('Error, itens a incorporar')
+                    return createNewOrder(watsonData, true)
+                } else
+                    resolve({ input: { errorMessage: body.message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log('Error on creating order: ' + response.statusCode)
                 console.log(body)

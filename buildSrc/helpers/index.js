@@ -197,7 +197,7 @@ function QuickReplies(payload, action) {
             quick_replies = payload.reduce((acc, curr) => {
                 acc.push({
                     // title: `${curr.notificationStructure.description.split('/')[curr.notificationStructure.description.split('/').length - 1]}<br>aberto em: ${curr.notificationDate.split('T')[0].split('-').reverse().join('/')} as ${curr.notificationDate.split('T')[1].split('.')[0]}`,
-                    title: `${curr.notificationStructure.description.split('/')[curr.notificationStructure.description.split('/').length - 1]}<br>aberto em: ${curr.notificationDate.split('T')[0].split('-').reverse().join('/')}`,
+                    title: `${curr.notificationStructure.description.split('/')[curr.notificationStructure.description.split('/').length - 1]}<br>aberto em: ${curr.notificationDate.split('T')[0].split('-').reverse().join('/')}<br>status: ${curr.notificationStatus.description}`,
                     type: 'postback_button',
                     payload: {
                         value: '<code>' + curr.notificationId

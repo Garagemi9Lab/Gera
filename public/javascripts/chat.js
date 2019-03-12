@@ -75,7 +75,8 @@ function sendToBot(event, inputBox) {
 function displayMessages(output) {
     let texts = output.text
     for (let text in texts) {
-        displayMessage(texts[text], 'watson');
+        if (texts[text] != '')
+            displayMessage(texts[text], 'watson');
     }
     if (output && output.quick_replies) {
         displayQuickReplies(output.quick_replies)
@@ -405,8 +406,12 @@ function QuickReplyElement(quick_reply) {
             button_list.setAttribute('hidden_value', quick_reply.payload.value)
             let message = quick_reply.title + '<br>'
             quick_reply.payload.items.forEach((item) => {
-                let date = item.expirationDate.split('T')[0].split('-').reverse().join('/')
-                message += 'Parc.: R$ ' + item.openBalance + ' / Venc. ' + date + '<br>'
+                let date = item.issueDate.split('T')[0].split('-').reverse().join('/')
+                message += 'Data do pedido: ' + date + '<br>'
+                date = item.expirationDate.split('T')[0].split('-').reverse().join('/')
+                message += 'Total: R$ ' + item.openBalance + ' / Venc. ' + date + '<br>'
+
+
             })
             button_list.innerHTML = message
             return button_list
