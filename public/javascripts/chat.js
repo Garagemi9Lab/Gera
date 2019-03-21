@@ -404,15 +404,7 @@ function QuickReplyElement(quick_reply) {
             button_list.setAttribute('class', 'quick_reply_btn postback_list_item')
             button_list.setAttribute('quick_reply_type', quick_reply.type)
             button_list.setAttribute('hidden_value', quick_reply.payload.value)
-            let message = quick_reply.title + '<br>'
-            quick_reply.payload.items.forEach((item) => {
-                let date = item.issueDate.split('T')[0].split('-').reverse().join('/')
-                message += 'Data do pedido: ' + date + '<br>'
-                date = item.expirationDate.split('T')[0].split('-').reverse().join('/')
-                message += 'Total: R$ ' + item.openBalance + ' / Venc. ' + date + '<br>'
-
-
-            })
+            let message = quick_reply.title
             button_list.innerHTML = message
             return button_list
 

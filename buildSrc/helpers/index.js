@@ -103,11 +103,10 @@ function QuickReplies(payload, action) {
         case "installments":
             quick_replies = Object.keys(payload).reduce((acc, curr) => {
                 acc.push({
-                    title: `Pedido: ${curr}`,
+                    title: getInstallmentsText(payload[curr]),
                     type: 'postback_list_button',
                     payload: {
-                        value: `<code>${curr}`,
-                        items: payload[curr]
+                        value: `<code>${curr}`
                     }
                 })
                 return acc
@@ -268,6 +267,24 @@ function getBusinessModelNameByCode(businessModel) {
         default:
             return businessModel.name
     }
+}
+
+function getInstallmentsText(installment) {
+    let total = 0
+    return `Pedido: ${installment[0].orderingNumber}<br>
+            Data do pedido: ${getDate(installment[0].issueDate)}<br>
+            ${installment.map((item, index) => {
+        total += item.openBalance
+        return `Parc. número: ${item.number}<br>${installment.length == 1 ? 'Parc. única:' : `Parc. ${index + 1}`} : R$ ${item.openBalance} / Venc. ${getDate(item.dueDate)}`
+    }).join('<br>')
+        }
+            <br>Total: R$  ${total}
+
+    `
+}
+
+function getDate(dateString) {
+    return dateString.split('T')[0].split('-').reverse().join('/')
 }
 
 function getSimulatedInstallmentsText(payload) {
