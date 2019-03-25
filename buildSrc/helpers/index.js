@@ -273,9 +273,10 @@ function getInstallmentsText(installment) {
     let total = 0
     return `Pedido: ${installment[0].orderingNumber}<br>
             Data do pedido: ${getDate(installment[0].issueDate)}<br>
+            Qtde parcelas em atraso: ${installment.length}<br>
             ${installment.map((item, index) => {
         total += item.openBalance
-        return `Parc. número: ${item.number}<br>${installment.length == 1 ? 'Parc. única:' : `Parc. ${index + 1}`} : R$ ${item.openBalance} / Venc. ${getDate(item.dueDate)}`
+        return `${installment.length == 1 ? 'Parc. única:' : `Parc. ${index + 1}`} : R$ ${item.openBalance} / Venc. ${getDate(item.dueDate)}`
     }).join('<br>')
         }
             <br>Total: R$  ${total}
