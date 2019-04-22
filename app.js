@@ -197,7 +197,7 @@ const sendToWatson = (params) => {
 
           case "get_business_models":
             Gera.getBusinessModels(watsonData).then((result) => {
-              watsonData.context = Object.assign({}, watsonData.context, result.userPayload)
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               let params = { context: watsonData.context }
               if (result.input) params.input = result.input
               if (result.input && result.input.hasBusinessModels) params.input = {
