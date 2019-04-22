@@ -443,7 +443,7 @@ div.head {
     }
     #chatlogs {
         min-height: 100px !important;
-        height: calc(100% - 0px) !important;
+        height: 100% !important;
     }
     @-moz-document url-prefix() {
         #chatlogs {
@@ -527,7 +527,7 @@ div.head {
     padding: 10px;
     width: auto;
     min-height: 113px;
-    /*height: calc(100% - 0px);*/
+    height: 100% !important;
     overflow-x: hidden;
     overflow-y: scroll;
 }
