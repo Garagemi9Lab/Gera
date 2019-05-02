@@ -279,7 +279,7 @@ function getInstallmentsText(installment) {
         return `${installment.length == 1 ? 'Parc. única:' : `Parc. ${index + 1}`} : R$ ${item.openBalance} / Venc. ${getDate(item.dueDate)}`
     }).join('<br>')
         }
-            <br>Total: R$  ${total}
+            <br>Total: R$  ${total.toFixed(2)}
 
     `
 }
