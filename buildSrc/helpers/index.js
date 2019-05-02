@@ -291,7 +291,8 @@ function getDate(dateString) {
 function getSimulatedInstallmentsText(payload) {
     return `${payload['installments'].map(item => (
         `<span>${payload['installments'].length == 1 ? 'Parc. única' : `${item.parcelNumber}ª Parc.:`}</span>
-        <span>Valor : ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}
+        <span>Valor total: ${(item.mainValue + item.administrativeFee).toFixed(2)}</span>
+        <span>Valor corrigido: ${item.parcelValue} , Venc.: ${item.dueDate.split('T')[0].split('-').reverse().join('/')}`)).join('</span><hr>')}
         <br>
         <hr>
         ${payload['discount'] && payload['discount'] > 0 ?

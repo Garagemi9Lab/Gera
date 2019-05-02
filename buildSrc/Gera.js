@@ -950,9 +950,10 @@ const addProduct = (watsonData) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
                 userPayload.order = body
+                let aux = JSON.parse(JSON.stringify(userPayload.foundProduct))
                 delete userPayload.foundProduct
                 delete userPayload.productQuantity
-                resolve({ input: { productAdded: true }, userPayload })
+                resolve({ input: { productAdded: true, product: aux }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
@@ -1054,9 +1055,10 @@ const editProductToAdd = (watsonData) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
                 userPayload.order = body
+                let aux = JSON.parse(JSON.stringify(userPayload.foundProduct))
                 delete userPayload.foundProduct
                 delete userPayload.productQuantity
-                resolve({ input: { productAdded: true }, userPayload })
+                resolve({ input: { productAdded: true , product: aux }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
