@@ -113,7 +113,7 @@ const sendToWatson = (params) => {
               let params = { context: watsonData.context }
               if (result.userPayload.parameters) {
                 params.input = {
-                  action: 'checkOverDueInstallments'
+                  action: 'checkOpenOrders'
                 }
               }
               sendToWatson(
