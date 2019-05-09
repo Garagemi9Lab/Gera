@@ -3,10 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "prejequiti": "cross-env APP_ENV=jequiti node ./environments",
+    "jequiti": "nodemon ./bin/www",
+    "pregera": "cross-env APP_ENV=gera  node ./environments",
+    "gera": "nodemon ./bin/www"
   },
   "dependencies": {
+    "chalk": "^2.4.2",
     "cookie-parser": "~1.4.3",
+    "cross-env": "^5.2.0",
     "debug": "~2.6.9",
     "dotenv": "^6.0.0",
     "ejs": "~2.5.7",
