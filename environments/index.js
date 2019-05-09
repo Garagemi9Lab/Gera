@@ -2,8 +2,6 @@ var chalk = require('chalk')
 var fs = require('fs')
 var path = require('path')
 
-
-
 console.log(chalk.cyan('Copying local environments'))
 
 var env_app = process.env.APP_ENV
