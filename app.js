@@ -531,6 +531,15 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "close_sac_notification":
+            Gera.closeSACNotification(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "get_notifications_sac":
             Gera.getSACNotifications(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })

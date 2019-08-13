@@ -1795,6 +1795,39 @@ const answerSACQuestions = (watsonData) => {
     })
 }
 
+const closeSACNotification = (watsonData) => {
+    console.log('Close SAC Notification method invoked...')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let notificationId = userPayload.SAC.notificationId
+
+        const options = {
+            method: 'PATCH',
+            uri: `${URL}/api/notifications/${notificationId}/closed`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                delete userPayload.notificationId
+                delete userPayload.questionAnswers
+                delete questions
+                delete questionsIndex
+
+                resolve({ userPayload, input: { notificationClosed: true } })
+
+            } else {
+                console.log('Error on Closing SAC Notification')
+                console.log(error)
+                console.log(body)
+            }
+        })
+
+
+    })
+}
+
 const getSACNotifications = (watsonData) => {
     console.log('Get Notifications SAC method invoked')
     return new Promise((resolve, reject) => {
@@ -1902,5 +1935,6 @@ module.exports = {
     answerSACQuestions,
     getSACNotifications,
     getNotificationSACDetails,
-    getSACQuestionAnswers
+    getSACQuestionAnswers,
+    closeSACNotification
 }
