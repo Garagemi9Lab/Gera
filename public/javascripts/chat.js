@@ -1,6 +1,8 @@
 var context = {}
 var promotionLoaded = false
 var waitForUserInput = false
+var inputLimit = false
+var maxLimit = 0
 var loggedUser = getSession('user')
 
 function waitForUser() {
@@ -32,7 +34,14 @@ function userMessage(message, action, data) {
 
     xhrPost('/message', params, function (data) {
         removeTyping()
-        console.log(JSON.stringify(data, null, 2))
+        let input = document.getElementById('textInput')
+        if (input.getAttribute('maxlength')) {
+            input.removeAttribute('maxLength')
+        }
+        if(input.getAttribute('type') == 'date'){
+            input.setAttribute('type','text')
+        }
+        console.log(data)
         if (!promotionLoaded && data.context.userPayload.tokens
             && data.context.userPayload.tokens.order && data.context.userPayload.tokens.order.valid
             && data.context.userPayload.order) {
@@ -45,7 +54,6 @@ function userMessage(message, action, data) {
         if (data.output.action && data.output.action == 'waitForUserInput') {
             waitForUser()
         }
-
     }, function (err) {
         removeTyping()
         displayMessage('Um erro ocorreu, tente mais tarde', 'watson');
@@ -135,10 +143,15 @@ function displayQuickReplies(quick_replies) {
         let div_quick_replies = document.createElement('div')
         div_quick_replies.setAttribute('class', 'quick_replies_div')
         quick_replies.forEach((quick_reply) => {
-            div_quick_replies.append(new QuickReplyElement(quick_reply))
+            let QR = new QuickReplyElement(quick_reply)
+            if (QR.innerHTML != undefined && QR.innerHTML != null)
+                div_quick_replies.append(QR)
         })
-        displayMessage(div_quick_replies, 'watson', 'quick_reply')
-        addClickListenerEvent('quick_reply_btn')
+        console.log(div_quick_replies)
+        if (div_quick_replies.childNodes.length > 0) {
+            displayMessage(div_quick_replies, 'watson', 'quick_reply')
+            addClickListenerEvent('quick_reply_btn')
+        }
     }
 }
 
@@ -472,7 +485,47 @@ function QuickReplyElement(quick_reply) {
 
             return dates_div
 
+        case 'table':
+            let table_div = document.createElement('div')
+            table_div.setAttribute('class', 'table_div')
 
+            let table = document.createElement('table')
+            table.setAttribute('class', 'quick_reply_table')
+
+            let table_header_row = document.createElement('tr')
+            quick_reply.payload.columns.forEach((column) => {
+                let th = document.createElement('th')
+                th.innerHTML = column
+                table_header_row.append(th)
+            })
+            table.append(table_header_row)
+            quick_reply.payload.rows.forEach(row => {
+                let tr = document.createElement('tr')
+                tr.setAttribute('class', 'quick_reply_btn')
+                tr.setAttribute('hidden_value', row.value)
+                tr.setAttribute('hidden_text', row.dataRow.join(' , '))
+                row.dataRow.forEach((data) => {
+                    let td = document.createElement('td')
+                    td.innerHTML = data
+                    tr.append(td)
+                })
+                table.append(tr)
+            })
+
+            table_div.append(table)
+
+            return table_div
+
+
+        case 'text-limit':
+            let input = document.getElementById('textInput')
+            input.setAttribute('maxlength', quick_reply.value)
+            return null
+
+        case 'input-data':
+            let inputT = document.getElementById('textInput')
+            inputT.setAttribute('type', 'date')
+            return null
 
         default:
             let button = document.createElement('button')
@@ -848,18 +901,20 @@ function removeDisableBlock() {
 function onQuickReplyClick(e) {
     // Remove quick replies bubble.
     if (waitForUserInput) removeDisableBlock()
-    console.log(e.target)
     let bubble = e.target.parentElement.parentElement.parentElement.parentElement
-    let text = e.target.innerHTML
-    let value = e.target.getAttribute('hidden_value')
-    let type = e.target.getAttribute('quick_reply_type')
+    let target = e.target
+    let text = ''
+    let value = ''
+    text = target.innerHTML
+    if (target.tagName.toUpperCase() == 'TD') {
+        target = target.parentElement
+        text = target.getAttribute('hidden_text')
+        bubble = e.target.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement
+    }
+    value = target.getAttribute('hidden_value')
     bubble.parentElement.removeChild(bubble)
+
     displayMessage(text, 'user')
-    // switch (type) {
-    // default:
-    // continue;
-    // }
-    // text = text + '<code>' + value
     userMessage(value)
 
 }

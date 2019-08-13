@@ -467,8 +467,6 @@ const getBusinessModels = (watsonData) => {
             headers: new RequestHeaders(watsonData, ORDER)
         }
 
-        console.log(JSON.stringify(options, null, 2))
-
         let userPayload = watsonData.context.userPayload
 
         request(options, (error, response, body) => {
@@ -491,6 +489,7 @@ const getBusinessModels = (watsonData) => {
 const selectBusinessModel = (watsonData) => {
     console.log('Select Business Model method invoked')
     return new Promise((resolve, reject) => {
+        console.log(watsonData.output)
         let userPayload = watsonData.context.userPayload
         const businessCode = watsonData.output.businessCode
         const businessModel = userPayload.businessModels.filter(bModel => {
@@ -1058,7 +1057,7 @@ const editProductToAdd = (watsonData) => {
                 let aux = JSON.parse(JSON.stringify(userPayload.foundProduct))
                 delete userPayload.foundProduct
                 delete userPayload.productQuantity
-                resolve({ input: { productAdded: true , product: aux }, userPayload })
+                resolve({ input: { productAdded: true, product: aux }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
@@ -1681,20 +1680,53 @@ const getNotificationQuestions = (watsonData) => {
         let notificationId = userPayload.SAC.notificationId
         const options = {
             method: 'GET',
-            uri: `${URL}/api/Notification/${notificationId}/questions`,
+            uri: `${URL}/api/notifications/${notificationId}/questions`,
             headers: new RequestHeaders(watsonData, SAC)
         }
 
         request(options, (error, response, body) => {
             if (!error && response && response.statusCode == 200) {
                 body = JSON.parse(body)
-                userPayload.SAC.questions = body.questions || []
+                userPayload.SAC.questions = body.questions.sort((a, b) => a.questionOrder > b.questionOrder) || []
                 userPayload.SAC.questionsIndex = 0
 
                 resolve({ userPayload, input: { hasQuestions: true } })
             } else {
                 console.log('Error on getting notification questions')
                 console.log(error)
+                console.log(body)
+                reject(error)
+            }
+        })
+    })
+}
+
+const getSACQuestionAnswers = (watsonData) => {
+    console.log('Get SAC Question Answers method invoked...')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let notificationId = userPayload.SAC.notificationId
+        let questionIndex = userPayload.SAC.questionsIndex
+        let question = userPayload.SAC.questions[questionIndex]
+
+        console.log(`questionIndex: ${questionIndex}`)
+        console.log(question)
+
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/notifications/${notificationId}/questions/${question.questionCode}`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                userPayload.SAC.questionAnswers = body
+                resolve({ userPayload, input: { hasQuestionAnswers: true } })
+            } else {
+                console.log('Error on getting SAC question Answers')
+                console.log(error)
+                console.log(body)
                 reject(error)
             }
         })
@@ -1705,20 +1737,61 @@ const answerSACQuestions = (watsonData) => {
     console.log('Answer SAC Questions mehtod invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        let answer = watsonData.output.answer
+        let notificationId = userPayload.SAC.notificationId
         let questionsIndex = userPayload.SAC.questionsIndex
+        let question = userPayload.SAC.questions[questionsIndex]
+        let questionAnswers = userPayload.SAC.questionAnswers
+        let answer = watsonData.output.answer
         let questions = userPayload.SAC.questions
-        questions[questionsIndex]['answer'] = answer
-        userPayload.SAC.questionsIndex = questionsIndex + 1
-        userPayload.SAC.questions = questions
-
-        if (userPayload.SAC.questionsIndex == userPayload.SAC.questions.length) {
-            resolve({ userPayload, input: { questionAnsweredFinished: true } })
-        } else {
-            resolve({ userPayload, input: { questionAnswered: true } })
+        let body = {}
+        // tabela || dominio || tabela faixa
+        let id = question.answerType.id
+        if (id == 4 || id == 2 || id == 10) {
+            body = {
+                tableValue: {
+                    columns: questionAnswers.possibleValues.columns.map(column => ({
+                        name: column.name
+                    }))
+                    ,
+                    rows: [
+                        {
+                            dataRow: questionAnswers.possibleValues.rows[answer].dataRow
+                        }
+                    ]
+                }
+            }
+        } else if (id == 1 || id == 6) {
+            body = {
+                singleValue: answer,
+            }
+        }
+        console.log(JSON.stringify(body, null, 2))
+        const options = {
+            method: 'PATCH',
+            uri: `${URL}/api/notifications/${notificationId}/questions/${question.questionCode}`,
+            headers: new RequestHeaders(watsonData, SAC),
+            body: JSON.stringify(body)
         }
 
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                questions[questionsIndex]['answer'] = body
+                userPayload.SAC.questionsIndex = questionsIndex + 1
+                userPayload.SAC.questions = questions
 
+                if (userPayload.SAC.questionsIndex == userPayload.SAC.questions.length) {
+                    resolve({ userPayload, input: { questionAnsweredFinished: true } })
+                } else {
+                    resolve({ userPayload, input: { questionAnswered: true } })
+                }
+
+            } else {
+                console.log('Error on answering SAC question')
+                console.log(error)
+                console.log(body)
+            }
+        })
     })
 }
 
@@ -1828,5 +1901,6 @@ module.exports = {
     getNotificationQuestions,
     answerSACQuestions,
     getSACNotifications,
-    getNotificationSACDetails
+    getNotificationSACDetails,
+    getSACQuestionAnswers
 }

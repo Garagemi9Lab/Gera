@@ -204,9 +204,45 @@ function QuickReplies(payload, action) {
                 })
                 return acc
             }, [])
-
             break;
 
+        case "SACQuestionAnswers":
+            // tabela || dominio || tabela faixa
+            let id = payload.answerType.id
+            if (id == 4 || id == 2 || id == 10) {
+                quick_replies = [
+                    {
+                        type: 'table',
+                        payload: {
+                            columns: payload.possibleValues.columns.map((column) => column.name),
+                            rows: payload.possibleValues.rows.map((row, index) => {
+                                row.value = '<code>' + index
+                                return row
+                            }).filter((row) => row.selected == false)
+                        }
+                    }
+                ]
+            }
+
+            if (id == 1) {
+                if (payload.additionalInfos && payload.additionalInfos.length > 0) {
+                    let textLimit = payload.additionalInfos.find((info) => info.id == 2)
+                    if (textLimit) {
+                        quick_replies.push({
+                            type: 'text-limit',
+                            value: textLimit.value
+                        })
+                    }
+                }
+            }
+
+            if (id == 6) {
+                quick_replies.push({
+                    type: 'input-data',
+                    value: 'DD-MM-YYYY'
+                })
+            }
+            break;
     }
 
     return quick_replies

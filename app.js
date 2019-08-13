@@ -511,6 +511,17 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "get_question_answers":
+            Gera.getSACQuestionAnswers(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              if (params.input.hasQuestionAnswers) {
+                params.input.quick_replies = new QuickReplies(watsonData.context.userPayload.SAC.questionAnswers, 'SACQuestionAnswers')
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
           case "answer_SAC_questions":
             Gera.answerSACQuestions(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
