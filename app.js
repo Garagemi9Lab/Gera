@@ -248,11 +248,14 @@ const sendToWatson = (params) => {
           //   })
           //   break;
           case 'select_cycle':
-            Gera.createNewOrder(watsonData).then((result) => {
+            Gera.selectCycle(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              let params = { context: watsonData.context }
-              if (result.input) params.input = result.input
-              sendToWatson(params).then((data) => resolve(data))
+              Gera.createNewOrder(watsonData).then((result) => {
+                watsonData.context = Object.assign({}, watsonData.context, result)
+                let params = { context: watsonData.context }
+                if (result.input) params.input = result.input
+                sendToWatson(params).then((data) => resolve(data))
+              })
             })
             break;
           case "select_kits":

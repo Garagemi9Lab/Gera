@@ -715,7 +715,7 @@ const createNewOrder = (watsonData, recursiveError) => {
             collectionMode: process.env.COLLECTION_MODE,
             collectionSystem: process.env.COLLECTION_SYSTEM,
             distributionCenterCode,
-            marketingCycle: null,
+            marketingCycle: marketingCycle,
             isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
             originSystem: process.env.ORIGIN_SYSTEM,
             startNewCycle: false
@@ -1936,5 +1936,6 @@ module.exports = {
     getSACNotifications,
     getNotificationSACDetails,
     getSACQuestionAnswers,
-    closeSACNotification
+    closeSACNotification,
+    selectCycle
 }

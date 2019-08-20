@@ -338,65 +338,6 @@ div.head {
   text-align: center;
 }
 
-/* TABS */
-
-#tabs {
-  display: flex;
-  flex-direction: column;
-  height: calc(100% - 103px);
-}
-
-#tabs > ul {
-  display: inline-flex;
-  width: 100%;
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-  flex-direction: row;
-  background: #f9f9f9;
-  height: 50px;
-}
-
-#tabs > ul > li {
-  width: 33.3%;
-  text-align: center;
-  display: flex;
-  height: 100%;
-}
-
-#tabs > ul > li > a {
-  display: flex;
-  height: 50px;
-  width: 100%;
-  justify-content: center;
-  color: #8d45ff;
-}
-
-#tabs > ul > li.ui-state-active > a {
-  color: #ffffff;
-}
-
-#tabs > ul > li.ui-state-active {
-  background: #9970da;
-}
-
-#tabs > ul > li > a:focus {
-  outline: none;
-}
-
-#aba-1,
-#aba-2,
-#aba-3 {
-  display: flex;
-  height: 100%;
-}
-
-#aba-3 {
-  overflow-x: hidden;
-  overflow-y: scroll;
-}
-
-/* /TABS */
 
 /* RESPONSIVO Chat-dados*/
 
@@ -411,9 +352,6 @@ div.head {
   .chat-dados-p {
     text-align: center;
     padding-left: 0;
-  }
-  #tabs {
-    height: calc(100% - 123px);
   }
 }
 
@@ -537,16 +475,6 @@ div.head {
   overflow-y: scroll;
 }
 
-#chatlogs::-webkit-scrollbar,
-#aba-3::-webkit-scrollbar {
-  width: 7px;
-}
-
-#chatlogs::-webkit-scrollbar-thumb,
-#aba-3::-webkit-scrollbar-thumb {
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.1);
-}
 
 .chat {
   display: flex;
