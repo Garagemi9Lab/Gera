@@ -1337,37 +1337,39 @@ const checkPartialPromotions = (partialPromotions, gifts) => {
 const checkConditionalSales = (watsonData) => {
     console.log('Check Conditional Sales method invoked')
     return new Promise((resolve, reject) => {
+        console.log('Conditional sales is disabled...')
         let userPayload = watsonData.context.userPayload
-        const options = {
-            method: 'GET',
-            url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales`,
-            headers: new RequestHeaders(watsonData, ORDER)
-        }
-        request(options, (error, response, body) => {
-            if (!error && response.statusCode == 200) {
-                body = JSON.parse(body)
-                if (body.length > 0) {
-                    console.log('There is conditional sales')
-                    userPayload.conditionalSales = body || null
-                    watsonData.context.userPayload = userPayload
-                    checkConditionalSalesItems(watsonData).then((userPayload) => {
-                        resolve({ input: { hasConditionalSales: true }, userPayload })
-                    })
-                } else {
-                    console.log('There is no conditional sales')
-                    resolve({ input: { hasConditionalSales: false }, userPayload })
-                }
+        resolve({ input: { hasConditionalSales: false }, userPayload })
+        // const options = {
+        //     method: 'GET',
+        //     url: `${URL}/api/orders/${userPayload.order.number}/conditionalSales`,
+        //     headers: new RequestHeaders(watsonData, ORDER)
+        // }
+        // request(options, (error, response, body) => {
+        //     if (!error && response.statusCode == 200) {
+        //         body = JSON.parse(body)
+        //         if (body.length > 0) {
+        //             console.log('There is conditional sales')
+        //             userPayload.conditionalSales = body || null
+        //             watsonData.context.userPayload = userPayload
+        //             checkConditionalSalesItems(watsonData).then((userPayload) => {
+        //                 resolve({ input: { hasConditionalSales: true }, userPayload })
+        //             })
+        //         } else {
+        //             console.log('There is no conditional sales')
+        //             resolve({ input: { hasConditionalSales: false }, userPayload })
+        //         }
 
-            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
-                console.log('Expired token')
-                expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else {
-                console.log('Error on checking conditional sales ')
-                console.log(response.statusCode)
-                console.log(body)
-                reject({ err: body, statusCode: response.statusCode })
-            }
-        })
+        //     } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+        //         console.log('Expired token')
+        //         expiredToken(watsonData, ORDER).then(result => resolve(result))
+        //     } else {
+        //         console.log('Error on checking conditional sales ')
+        //         console.log(response.statusCode)
+        //         console.log(body)
+        //         reject({ err: body, statusCode: response.statusCode })
+        //     }
+        // })
     })
 }
 
