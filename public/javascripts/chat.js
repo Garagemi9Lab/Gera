@@ -42,12 +42,12 @@ function userMessage(message, action, data) {
             input.setAttribute('type','text')
         }
         console.log(data)
-        if (!promotionLoaded && data.context.userPayload.tokens
-            && data.context.userPayload.tokens.order && data.context.userPayload.tokens.order.valid
-            && data.context.userPayload.order) {
-            getPromotions(data);
-            promotionLoaded = true
-        }
+        // if (!promotionLoaded && data.context.userPayload.tokens
+        //     && data.context.userPayload.tokens.order && data.context.userPayload.tokens.order.valid
+        //     && data.context.userPayload.order) {
+        //     getPromotions(data);
+        //     promotionLoaded = true
+        // }
         displayMessages(data.output)
         context = data.context;
 
@@ -926,35 +926,35 @@ function addClickListenerEvent(className) {
 
 }
 
-function getPromotions(watsonData) {
-    xhrPost('/api/getPromotions', watsonData, (result) => {
+// function getPromotions(watsonData) {
+//     xhrPost('/api/getPromotions', watsonData, (result) => {
 
-        if (result.input.hasPromotions) {
-            let promotion_div = document.getElementById('promotions_div')
-            let promotions = ''
-            result.userPayload.promotions.forEach((promotion) => {
-                promotions += '<div class="d-flex linha-promocao">' +
-                    '<div class="col-2 d-flex ico-promocao align-center justify-center" >' +
-                    '<i class="material-icons">local_offer</i>' +
-                    '</div >' +
-                    '<div class="col-7 align-center">' +
-                    '<div class="titulo-promocao">' + promotion.title + '</div>' +
-                    '<div class="desc-promocao">' + promotion.description + '</div>' +
-                    '</div>' +
-                    '<div class="col-3 botao-promocao align-center justify-center">' +
-                    '<div class="valor-promocao"><strong>Ver</strong></div>' +
-                    '</div>' +
-                    '</div>'
-            })
-            promotion_div.innerHTML = promotions
-            $("#tabs").tabs();
-        } else {
-            // No promotions found
-        }
-    }, (err) => {
-        console.log(err)
-    })
-}
+//         if (result.input.hasPromotions) {
+//             let promotion_div = document.getElementById('promotions_div')
+//             let promotions = ''
+//             result.userPayload.promotions.forEach((promotion) => {
+//                 promotions += '<div class="d-flex linha-promocao">' +
+//                     '<div class="col-2 d-flex ico-promocao align-center justify-center" >' +
+//                     '<i class="material-icons">local_offer</i>' +
+//                     '</div >' +
+//                     '<div class="col-7 align-center">' +
+//                     '<div class="titulo-promocao">' + promotion.title + '</div>' +
+//                     '<div class="desc-promocao">' + promotion.description + '</div>' +
+//                     '</div>' +
+//                     '<div class="col-3 botao-promocao align-center justify-center">' +
+//                     '<div class="valor-promocao"><strong>Ver</strong></div>' +
+//                     '</div>' +
+//                     '</div>'
+//             })
+//             promotion_div.innerHTML = promotions
+//             $("#tabs").tabs();
+//         } else {
+//             // No promotions found
+//         }
+//     }, (err) => {
+//         console.log(err)
+//     })
+// }
 
 function showTyping() {
     var chatBox = document.getElementById('chatlogs')
