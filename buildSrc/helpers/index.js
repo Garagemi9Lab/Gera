@@ -264,6 +264,25 @@ function CustomMessage(payload, action) {
             if (payload.items.length > 0)
                 customMessage += 'Total: ' + payload.businessInformation.marketValue + '<br>'
             break;
+        case 'promotions':
+            customMessage = `Promoções: <br> <br>`
+            payload.forEach(promotion => {
+                customMessage += `${promotion.title} <br>
+                Desc.: ${promotion.description}<br>
+                Cod.: ${promotion.code}<br><hr>
+                `
+            })
+            break;
+
+        case 'gifts':
+            customMessage = ''
+            payload.forEach(gift => {
+                customMessage += `${gift.title} <br> Desc: ${gift.description} <br>`
+                if (gift.giftType == 'discount') customMessage += 'Desconto: ' + Math.ceil(gift.discount) + '<br>'
+                else if (gift.giftType == 'partialPrice') customMessage += 'Falta(m) R$ ' + gift.missingValue + ' Reais do pedido<br>'
+                customMessage += '<hr>'
+            })
+            break;
         case 'substitutions':
             payload.forEach((item) => {
                 customMessage += `Nome: ${item.productName} <br>Cod: ${item.productCode}<br>Desc: ${item.productDescription}<br>Valor: ${item.unityPrice}<br><hr>`

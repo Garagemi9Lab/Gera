@@ -489,7 +489,6 @@ const getBusinessModels = (watsonData) => {
 const selectBusinessModel = (watsonData) => {
     console.log('Select Business Model method invoked')
     return new Promise((resolve, reject) => {
-        console.log(watsonData.output)
         let userPayload = watsonData.context.userPayload
         const businessCode = watsonData.output.businessCode
         const businessModel = userPayload.businessModels.filter(bModel => {
@@ -642,7 +641,6 @@ const selectCycle = (watsonData) => {
     console.log('Select Cycle method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        console.log(JSON.stringify(watsonData, null, 2))
         delete userPayload.cycles
         delete userPayload.cycle
         const selected_cycle = watsonData.output.selected_cycle || null
@@ -1270,16 +1268,17 @@ const checkGifts = (watsonData) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
                 let gifts = []
-                // checkAcquiredPromotion(body.acquiredPromotion, gifts).then((gifts) => {
-                // checkPartialPromotions(body, gifts).then((gifts) => {
-                console.log(JSON.stringify(gifts, null, 2))
-                userPayload.order = body
-                let hasPromostionsToChoose = false
-                if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
-                if (gifts.length > 0) resolve({ input: { hasGifts: true, gifts, hasPromostionsToChoose }, userPayload })
-                else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
-                // })
-                // })
+                checkAcquiredPromotion(body.acquiredPromotion, gifts).then((gifts) => {
+                    checkPartialPromotions(body, gifts).then((gifts) => {
+                        console.log(JSON.stringify(gifts, null, 2))
+                        userPayload.order = body
+                        userPayload.gifts = gifts
+                        let hasPromostionsToChoose = false
+                        if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
+                        if (gifts.length > 0) resolve({ input: { hasGifts: true, hasPromostionsToChoose }, userPayload })
+                        else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
+                    })
+                })
             } else {
                 reject({ err: body })
             }

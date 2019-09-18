@@ -369,6 +369,20 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_promotions":
+            Gera.checkPromotions(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.hasPromotions && result.input.hasPromotions == true) {
+                  result.input.data = CustomMessage(watsonData.context.userPayload.promotions, 'promotions')
+                }
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "reserve_order":
             Gera.reserverOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
@@ -402,10 +416,14 @@ const sendToWatson = (params) => {
           case "check_gifts":
             Gera.checkGifts(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
-              sendToWatson({
-                context: watsonData.context,
-                input: result.input
-              }).then(data => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.hasGifts) {
+                  result.input.data = CustomMessage(watsonData.context.userPayload.gifts, 'gifts')
+                }
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
             })
             break;
 
