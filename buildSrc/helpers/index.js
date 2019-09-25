@@ -209,7 +209,7 @@ function QuickReplies(payload, action) {
         case "SACQuestionAnswers":
             // tabela || dominio || tabela faixa
             let id = payload.answerType.id
-            if (id == 4 || id == 2 || id == 10) {
+            if ((id == 4 && payload.questionOrder != 1) || id == 2 || id == 10) {
                 quick_replies = [
                     {
                         type: 'table',
@@ -242,6 +242,18 @@ function QuickReplies(payload, action) {
                     value: 'DD-MM-YYYY'
                 })
             }
+
+            if (id == 4 && payload.questionOrder == 1) {
+                quick_replies.push({
+                    type: 'input-autocomplete',
+                    dataType: 'number',
+                    autocompleteLimit: 5,
+                    data: payload.possibleValues.rows.reduce((acc, row, index) => {
+                        acc[row.dataRow[0]] = '<code>' + index
+                        return acc
+                    }, {})
+                })
+            }
             break;
     }
 
@@ -253,16 +265,18 @@ function CustomMessage(payload, action) {
     let customMessage = ''
     switch (action) {
         case 'order':
+            // origin.id == 2 ( o produto é doação e não é pra venda. ) 
             customMessage = `Pedido ${payload.number} <br> <br>`
             payload.items.forEach(item => {
                 customMessage += `Cód: ${item.productCode}<br>
                 Nome: ${item.productName}<br>
                 Qtd: ${item.quantity}<br>
-                Valor: ${item.unitMarketValue}<br><hr>
+                Tipo: ${item.origin.description} <br>
+                Valor: ${item.origin.id == 2 ? 0 : item.unitMarketValue}<br><hr> 
                 `
             })
             if (payload.items.length > 0)
-                customMessage += 'Total: ' + payload.businessInformation.marketValue + '<br>'
+                customMessage += 'Total: ' + payload.totals.totalProductValueWithoutDiscount + '<br>'
             break;
         case 'promotions':
             customMessage = `Promoções: <br> <br>`

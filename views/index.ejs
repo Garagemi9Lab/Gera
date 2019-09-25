@@ -3,12 +3,20 @@
 
 <head>
   <title>GeraBot</title>
+
+
+  <!--Import materialize.css-->
+  <link type="text/css" rel="stylesheet" href="/vendor/css/materialize.min.css" media="screen,projection" />
+
+  <!--Let browser know website is optimized for mobile-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="/stylesheets/app.css">
   <link rel="stylesheet" href="/stylesheets/bot.css">
+  <!--Import Google Icon Font-->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <script src="/javascripts/jquery-2.2.3.min.js"></script>
   <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
@@ -32,8 +40,8 @@
         </div>
       </div>
       <!-- /head -->
-     <div id="chatlogs"></div>
-      <div class="chat-form" id="chat_footer">
+      <div id="chatlogs"></div>
+      <div class="chat-form input-field" id="chat_footer">
         <input id="textInput" onkeydown="sendToBot(event, this)" placeholder="Digite algo..." />
         <button id="sendBtn" disabled>
           <i class="botao fa fa-arrow-circle-right fa-3x"></i>
@@ -44,6 +52,9 @@
       <i class="fa fa-2x fa-comments"></i>
     </div>
   </div>
+
+  <!--JavaScript at end of body for optimized loading-->
+  <script type="text/javascript" src="/vendor/js/materialize.min.js"></script>
   <script src="/javascripts/xhr.js"></script>
   <script src="/javascripts/chat.js"></script>
   <script src="/javascripts/index.js"></script>

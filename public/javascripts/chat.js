@@ -38,8 +38,9 @@ function userMessage(message, action, data) {
         if (input.getAttribute('maxlength')) {
             input.removeAttribute('maxLength')
         }
-        if(input.getAttribute('type') == 'date'){
-            input.setAttribute('type','text')
+        if (input.getAttribute('type') != 'text') {
+            input.setAttribute('type', 'text')
+            input.removeAttribute('class')
         }
         console.log(data)
         // if (!promotionLoaded && data.context.userPayload.tokens
@@ -71,10 +72,41 @@ function sendToBot(event, inputBox) {
     if (event.keyCode === 13 || event.type === 'click') {
         if (inputBox.value && inputBox.value.trim().length > 0) {
             let message = inputBox.value.trim()
-            displayMessage(message, 'user')
-            userMessage(message)
-            // Clear input box for further messages
-            inputBox.value = '';
+
+
+            // Clear autocomplete
+            var input = document.getElementById('textInput')
+            if (input.getAttribute('class') == 'autocomplete') {
+                // Se tiver um hidden value
+                if (input.getAttribute('hidden-value')) {
+                    let data = JSON.parse(input.getAttribute('hidden-value'))
+
+                    let key = Object.keys(data).find((el) => el == message)
+                    if (key) {
+                        displayMessage(message, 'user')
+                        message = data[key]
+                        console.log(message)
+                        userMessage(message)
+                        // Clear input box for further messages
+                        inputBox.value = '';
+                        input.removeAttribute('hidden-value')
+                        input.removeAttribute('data-target')
+                        var elems = document.querySelectorAll('.autocomplete');
+                        var instance = M.Autocomplete.getInstance(elems[0]);
+                        instance.destroy();
+
+
+                    } else {
+                        alert('Favor selecione uma opção sugerida!')
+                    }
+                }
+            } else {
+                displayMessage(message, 'user')
+                userMessage(message)
+                // Clear input box for further messages
+                inputBox.value = '';
+            }
+
             inputBox.focus()
         }
     }
@@ -518,13 +550,31 @@ function QuickReplyElement(quick_reply) {
 
 
         case 'text-limit':
-            let input = document.getElementById('textInput')
+            var input = document.getElementById('textInput')
             input.setAttribute('maxlength', quick_reply.value)
             return null
 
         case 'input-data':
-            let inputT = document.getElementById('textInput')
-            inputT.setAttribute('type', 'date')
+            var input = document.getElementById('textInput')
+            input.setAttribute('type', 'date')
+            return null
+
+        case 'input-autocomplete':
+            var input = document.getElementById('textInput')
+            input.setAttribute('class', 'autocomplete')
+            input.setAttribute('type', quick_reply.dataType)
+            input.setAttribute('hidden-value', JSON.stringify(quick_reply.data))
+
+            var data = Object.keys(quick_reply.data).reduce((acc, elem) => {
+                acc[elem] = null
+                return acc
+            }, {})
+            var elems = document.querySelectorAll('.autocomplete');
+            var instances = M.Autocomplete.init(elems, {
+                data: data,
+                limit: quick_reply.autocompleteLimit
+            });
+
             return null
 
         default:
