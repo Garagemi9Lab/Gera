@@ -1273,10 +1273,10 @@ const checkGifts = (watsonData) => {
                         console.log(JSON.stringify(gifts, null, 2))
                         userPayload.order = body
                         userPayload.gifts = gifts
-                        let hasPromostionsToChoose = false
-                        if (body.rewardsToChoosePromotions.length > 0) hasPromostionsToChoose = true
-                        if (gifts.length > 0) resolve({ input: { hasGifts: true, hasPromostionsToChoose }, userPayload })
-                        else resolve({ input: { hasGifts: false, hasPromostionsToChoose }, userPayload })
+                        let hasPromotionsToChoose = false
+                        if (body.rewardsToChoosePromotions.length > 0) hasPromotionsToChoose = true
+                        if (gifts.length > 0) resolve({ input: { hasGifts: true, hasPromotionsToChoose }, userPayload })
+                        else resolve({ input: { hasGifts: false, hasPromotionsToChoose }, userPayload })
                     })
                 })
             } else {
