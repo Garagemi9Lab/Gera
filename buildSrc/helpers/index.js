@@ -209,7 +209,8 @@ function QuickReplies(payload, action) {
         case "SACQuestionAnswers":
             // tabela || dominio || tabela faixa
             let id = payload.answerType.id
-            if ((id == 4 && payload.questionOrder != 1) || id == 2 || id == 10) {
+            const noneDefaultTableQuestions = [1]
+            if ((id == 4 && noneDefaultTableQuestions.indexOf(payload.questionCode) == -1) || id == 2 || id == 10) {
                 quick_replies = [
                     {
                         type: 'table',
@@ -243,7 +244,7 @@ function QuickReplies(payload, action) {
                 })
             }
 
-            if (id == 4 && payload.questionOrder == 1) {
+            if (id == 4 && payload.questionCode == 1) {
                 quick_replies.push({
                     type: 'input-autocomplete',
                     dataType: 'number',
@@ -253,6 +254,10 @@ function QuickReplies(payload, action) {
                         return acc
                     }, {})
                 })
+            }
+            if (id == 10 && payload.questionCode == 72) {
+                var allowed_options_index = [2, 4, 8]
+                quick_replies[0].allowed_options_index = allowed_options_index
             }
             break;
     }

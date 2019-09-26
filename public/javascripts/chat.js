@@ -524,19 +524,34 @@ function QuickReplyElement(quick_reply) {
             let table = document.createElement('table')
             table.setAttribute('class', 'quick_reply_table')
 
+            var allowed_options_index = quick_reply.allowed_options_index || []
+
             let table_header_row = document.createElement('tr')
-            quick_reply.payload.columns.forEach((column) => {
-                let th = document.createElement('th')
-                th.innerHTML = column
-                table_header_row.append(th)
+            quick_reply.payload.columns.forEach((column, index) => {
+                var appendColumn = true
+                if (allowed_options_index.length > 0 &&
+                    allowed_options_index.indexOf(index) == -1
+                ) {
+                    appendColumn = false
+                }
+                if (appendColumn) {
+                    let th = document.createElement('th')
+                    th.innerHTML = column
+                    table_header_row.append(th)
+                }
             })
             table.append(table_header_row)
             quick_reply.payload.rows.forEach(row => {
+                let row_aux = JSON.parse(JSON.stringify(row))
                 let tr = document.createElement('tr')
                 tr.setAttribute('class', 'quick_reply_btn')
                 tr.setAttribute('hidden_value', row.value)
-                tr.setAttribute('hidden_text', row.dataRow.join(' , '))
-                row.dataRow.forEach((data) => {
+
+                if (allowed_options_index.length > 0)
+                    row_aux.dataRow = row_aux.dataRow.filter((dtRow, index) => allowed_options_index.indexOf(index) != -1)
+
+                tr.setAttribute('hidden_text', row_aux.dataRow.join(' , '))
+                row_aux.dataRow.forEach((data) => {
                     let td = document.createElement('td')
                     td.innerHTML = data
                     tr.append(td)
