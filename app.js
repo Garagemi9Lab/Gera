@@ -402,6 +402,15 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_minimum_points_quantity":
+            Gera.checkMinimumPointsQuantity(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "check_suggestions":
             Gera.checkSuggestions(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })

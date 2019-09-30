@@ -1182,6 +1182,25 @@ const removeProduct = (watsonData) => {
     })
 }
 
+const checkMinimumPointsQuantity = (watsonData) => {
+    console.log('check minimum points quantity method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let businessInformation = userPayload.order.businessInformation
+
+        let minimumPointsQuantity = businessInformation.minimumPointsQuantity
+        let minimumPointsQuantityConsideredOrder = businessInformation.minimumPointsQuantityConsideredOrder
+
+        let result = ((minimumPointsQuantity / 100) - (minimumPointsQuantityConsideredOrder / 100)).toFixed(2)
+
+        if (result > 0) {
+            resolve({ input: { minimumPointsRequired: true, data: result }, userPayload })
+        } else {
+            resolve({ input: { minimumPointsRequired: false }, userPayload })
+        }
+    })
+}
+
 
 const checkSuggestions = (watsonData) => {
     console.log('Check suggestions method inovked')
@@ -1921,6 +1940,7 @@ module.exports = {
     checkProductCodeRemove,
     removeProduct,
     reserverOrder,
+    checkMinimumPointsQuantity,
     checkSuggestions,
     checkGifts,
     checkConditionalSales,
