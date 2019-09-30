@@ -281,7 +281,10 @@ function CustomMessage(payload, action) {
                 `
             })
             if (payload.items.length > 0)
-                customMessage += 'Total: ' + payload.totals.totalProductValueWithoutDiscount + '<br>'
+                if (payload.totals && payload.totals.totalProductValueWithoutDiscount)
+                    customMessage += 'Total: ' + payload.totals.totalProductValueWithoutDiscount + '<br>'
+                else if (payload.businessInformation && payload.businessInformation.netValue)
+                    customMessage += 'Total: ' + payload.businessInformation.netValue + '<br>'
             break;
         case 'promotions':
             customMessage = `Promoções: <br> <br>`
