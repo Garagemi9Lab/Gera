@@ -296,6 +296,37 @@ function CustomMessage(payload, action) {
             })
             break;
 
+        case 'partialPromotions':
+            customMessage = '<b>Falta pouco para você ganhar</b> <br><hr>'
+            payload.forEach(partialPromotion => {
+                customMessage += `${partialPromotion.title} <br>`
+                customMessage += `${partialPromotion.description} <br>`
+                customMessage += `<br> Falta(m) o(s) item(s) abaixo para conquistar a promoção: <br>`
+                partialPromotion.requirements.forEach(requirement => {
+                    let id = requirement.valueType.id
+                    // Itens
+                    if (id == 1) {
+                        customMessage += `Falta(m): ${requirement.missingValue}<br>`
+                        customMessage += `Produto: ${requirement.productRequired.productName}<br>`
+                        customMessage += `Cod.: ${requirement.productRequired.productCode}<br>`
+                        customMessage += `Valor: R$ ${requirement.productRequired.unityPrice}<br>`
+                    }
+                    // Preço
+                    if (id == 3) {
+                        let productStructureRequired = requirement.productStructureRequired
+                        customMessage += `Falta(m): <span style="color:green;">R$ ${requirement.missingValue}</span> na linha de produtos ${productStructureRequired.name}`
+                    }
+
+                    if (requirement.logicOperator) {
+                        customMessage += `<br><b>${requirement.logicOperator.description}</b> <br><br>`
+                    } else {
+                        customMessage += `<br><hr><br>`
+                    }
+                })
+            })
+
+            break;
+
         case 'gifts':
             customMessage = ''
             payload.forEach(gift => {

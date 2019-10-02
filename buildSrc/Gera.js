@@ -1268,7 +1268,7 @@ const reserverOrder = (watsonData) => {
 }
 
 const checkGifts = (watsonData) => {
-    console.log('Check gifts method inovked')
+    console.log('Check gifts method invoked...')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
         const orderNumber = userPayload.order.number
@@ -1286,20 +1286,24 @@ const checkGifts = (watsonData) => {
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 200) {
-                let gifts = []
-                checkAcquiredPromotion(body.acquiredPromotion, gifts).then((gifts) => {
-                    checkPartialPromotions(body, gifts).then((gifts) => {
-                        console.log(JSON.stringify(gifts, null, 2))
-                        userPayload.order = body
-                        userPayload.gifts = gifts
-                        let hasPromotionsToChoose = false
-                        if (body.rewardsToChoosePromotions.length > 0) hasPromotionsToChoose = true
-                        if (gifts.length > 0) resolve({ input: { hasGifts: true, hasPromotionsToChoose }, userPayload })
-                        else resolve({ input: { hasGifts: false, hasPromotionsToChoose }, userPayload })
-                    })
-                })
+                userPayload.order = body
+                // userPayload.gifts = gifts
+                // let hasPromotionsToChoose = false
+                // if (body.rewardsToChoosePromotions.length > 0) hasPromotionsToChoose = true
+                // if (gifts.length > 0) resolve({ input: { hasGifts: true, hasPromotionsToChoose }, userPayload })
+                // else resolve({ input: { hasGifts: false, hasPromotionsToChoose }, userPayload })
+                resolve({ userPayload, error: false })
+
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode == 400) {
+                resolve({ input: { errorMessage: body[0].message || 'Um erro ocorreu, tente novamente' }, userPayload, error: false })
             } else {
-                reject({ err: body })
+                console.log('Error on reserve order')
+                console.log(response.statusCode)
+                console.log(body)
+                reject({ err: body, statusCode: response.statusCode })
             }
         })
 
@@ -1329,26 +1333,23 @@ const checkAcquiredPromotion = (acquiredPromotion, gifts) => {
     })
 }
 
-const checkPartialPromotions = (partialPromotions, gifts) => {
+const checkPartialPromotions = (watsonData) => {
     console.log('Check partial promotions method invoked..')
     return new Promise((resolve, reject) => {
-        if (partialPromotions.length > 0) {
-            partialPromotions.forEach((element) => {
-                let promotion = {
-                    title: element.title,
-                    description: element.description,
-                    giftType: 'partial'
-                }
-                if (element.requirements.length > 0) {
-                    if (element.requirements[0].valueType.id == 3) {
-                        promotion.missingValue = element.requirements[0].missingValue
-                        promotion.giftType = 'partialPrice'
+        checkGifts(watsonData)
+            .then((result) => {
+                if (result.error) resolve(result)
+                else {
+                    let userPayload = result.userPayload
+                    let partialPromotions = userPayload.order.partialPromotions
+                    if (partialPromotions.length > 0) {
+                        resolve({ input: { hasPartialPromotions: true }, userPayload })
+                    } else {
+                        resolve({ input: { hasPartialPromotions: false }, userPayload })
                     }
                 }
-                gifts.push(promotion)
             })
-        }
-        resolve(gifts)
+            .catch(reject)
     })
 }
 
@@ -1942,6 +1943,7 @@ module.exports = {
     reserverOrder,
     checkMinimumPointsQuantity,
     checkSuggestions,
+    checkPartialPromotions,
     checkGifts,
     checkConditionalSales,
     selectConditionalSalesItems,
