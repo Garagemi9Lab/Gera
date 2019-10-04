@@ -301,15 +301,28 @@ function CustomMessage(payload, action) {
             payload.forEach(partialPromotion => {
                 customMessage += `${partialPromotion.title} <br>`
                 customMessage += `${partialPromotion.description} <br>`
-                customMessage += `<br> Falta(m) o(s) item(s) abaixo para conquistar a promoção: <br>`
-                partialPromotion.requirements.forEach(requirement => {
+                customMessage += `<br> Falta(m) o(s) item(s) abaixo para conquistar a promoção: <br><br><br>`
+                partialPromotion.requirements.forEach((requirement, index) => {
                     let id = requirement.valueType.id
                     // Itens
                     if (id == 1) {
-                        customMessage += `Falta(m): ${requirement.missingValue}<br>`
-                        customMessage += `Produto: ${requirement.productRequired.productName}<br>`
-                        customMessage += `Cod.: ${requirement.productRequired.productCode}<br>`
-                        customMessage += `Valor: R$ ${requirement.productRequired.unityPrice}<br>`
+                        if (requirement.productRequired) {
+                            customMessage += `Falta(m) ${requirement.missingValue} unidade(s) do ${requirement.description}<br>`
+                            customMessage += `Cod.: ${requirement.productRequired.productCode}<br>`
+                            customMessage += `Valor: R$ ${requirement.productRequired.unityPrice}<br>`
+                        } else {
+                            customMessage += `Falta(m) ${requirement.missingValue} ${requirement.description}<br>`
+                        }
+                    }
+
+                    if (id == 2) {
+                        if (requirement.productRequired) {
+                            customMessage += `Falta(m) ${requirement.missingValue} ${requirement.description}<br>`
+                            customMessage += `Cod.: ${requirement.productRequired.productCode}<br>`
+                            customMessage += `Valor: R$ ${requirement.productRequired.points}<br>`
+                        } else {
+                            customMessage += `Falta(m) ${requirement.missingValue} ${requirement.description}<br>`
+                        }
                     }
                     // Preço
                     if (id == 3) {
@@ -317,12 +330,45 @@ function CustomMessage(payload, action) {
                         customMessage += `Falta(m): <span style="color:green;">R$ ${requirement.missingValue}</span> na linha de produtos ${productStructureRequired.name}`
                     }
 
-                    if (requirement.logicOperator) {
+                    if (requirement.logicOperator && index < partialPromotion.requirements.length - 1) {
                         customMessage += `<br><b>${requirement.logicOperator.description}</b> <br><br>`
                     } else {
                         customMessage += `<br><hr><br>`
                     }
                 })
+            })
+
+            break;
+
+        case 'acquiredPromotion':
+            customMessage = '<b>Parabéns!! Você ganhou:</b> <hr><br>'
+            payload.forEach((acquiredPromotion) => {
+                customMessage += `<b>${acquiredPromotion.title}</b><br>`
+                customMessage += `${acquiredPromotion.description}<br>`
+
+                let premiosConquistados = []
+                let produtosComDesconto = []
+                acquiredPromotion.rewards.forEach(reward => {
+                    let id = reward.type.id
+
+                    if (id == 2) {
+                        premiosConquistados.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: ${reward.type.description}<br>`)
+                    }
+                    if (id == 3) {
+                        produtosComDesconto.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: Desconto ${Math.ceil(reward.discount.toFixed(2))}%<br>`)
+                    }
+                })
+
+                if (premiosConquistados.length > 0) {
+                    customMessage += `<br><b>Premio(s) conquistado(s):</b><br>`
+                    customMessage += premiosConquistados.join('<hr>')
+                }
+
+                if (produtosComDesconto.length > 0) {
+                    customMessage += `<br><b>Produto(s) com descont(s):</b><br>`
+                    customMessage += produtosComDesconto.join('<hr>')
+                }
+                customMessage += '<br>'
             })
 
             break;

@@ -1310,26 +1310,16 @@ const checkGifts = (watsonData) => {
     })
 }
 
-const checkAcquiredPromotion = (acquiredPromotion, gifts) => {
+const checkAcquiredPromotion = (watsonData) => {
     console.log('Check acquired promotion method invoked')
     return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        let acquiredPromotion = userPayload.order.acquiredPromotion
         if (acquiredPromotion.length > 0) {
-            acquiredPromotion.forEach(element => {
-                let promotion = {
-                    title: element.title,
-                    description: element.description,
-                    giftType: 'reward'
-                }
-                if (element.rewards.length > 0) {
-                    if (element.rewards[0].type.id == 3) {
-                        promotion.giftType = 'discount'
-                        promotion.discount = element.rewards[0].discount
-                    }
-                }
-                gifts.push(promotion)
-            });
+            resolve({ input: { hasAcquiredPromotions: true }, userPayload })
+        } else {
+            resolve({ input: { hasAcquiredPromotions: false }, userPayload })
         }
-        resolve(gifts)
     })
 }
 
@@ -1944,6 +1934,7 @@ module.exports = {
     checkMinimumPointsQuantity,
     checkSuggestions,
     checkPartialPromotions,
+    checkAcquiredPromotion,
     checkGifts,
     checkConditionalSales,
     selectConditionalSalesItems,

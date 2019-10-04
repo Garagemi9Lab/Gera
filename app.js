@@ -434,6 +434,18 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_acquired_promotion":
+            Gera.checkAcquiredPromotion(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.hasAcquiredPromotions) result.input.data = CustomMessage(watsonData.context.userPayload.order.acquiredPromotion, 'acquiredPromotion')
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "check_gifts":
             Gera.checkGifts(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
