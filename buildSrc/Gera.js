@@ -1507,8 +1507,8 @@ const checkAddresses = (watsonData) => {
         }
 
         request(options, (error, response, body) => {
-            body = JSON.parse(body)
             if (!error && response.statusCode == 200) {
+                body = JSON.parse(body)
                 if (body.length > 0) {
                     userPayload.addresses = body
                     resolve({ input: { hasAddresses: true }, userPayload })
@@ -1516,12 +1516,113 @@ const checkAddresses = (watsonData) => {
                     console.log('There is no addressess registered!')
                     resolve({ input: { hasAddresses: false }, userPayload })
                 }
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                reject({ err: body })
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+
+        })
+    })
+}
+
+const selectAddress = (watsonData) => {
+    console.log('Select address method inovked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const addressCode = watsonData.output.addressCode
+        const address = userPayload.addresses.find(address => address.type.id == addressCode)
+
+        const body = {
+            "peopleCode": address.people.code,
+            "addressTypeId": address.type.id,
+            "isWithdrawalCenter": userPayload.order.businessInformation.isWithdrawalCenter,
+            "isSupportCenter": false
+        }
+
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${orderNumber}/deliveryAddresses`,
+            headers: new RequestHeaders(watsonData, ORDER),
+            body: JSON.stringify(body)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                userPayload.order = body
+                resolve({ input: { addressSelected: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
             }
         })
     })
 }
+
+const checkDeliveryOptions = (watsonData) => {
+    console.log('Check delivery options method inovked..')
+    return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/deliveryOptions`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+
+                console.log(JSON.stringify(body, null, 2))
+
+                resolve({ input: { addressSelected: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+        })
+    })
+}
+
 
 const redirectToCart = (watsonData) => {
     console.log('Redirect to cart method invoked')
@@ -1939,6 +2040,8 @@ module.exports = {
     checkConditionalSales,
     selectConditionalSalesItems,
     checkAddresses,
+    selectAddress,
+    checkDeliveryOptions,
     redirectToCart,
     getSACToken,
     getNotificationStructuresParents,

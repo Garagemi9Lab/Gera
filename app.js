@@ -439,7 +439,7 @@ const sendToWatson = (params) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
               let params = { context: watsonData.context }
               if (result.input) {
-                if (result.input.hasAcquiredPromotions) result.input.data = CustomMessage(watsonData.context.userPayload.order.acquiredPromotion, 'acquiredPromotion')
+                if (result.input.hasAcquiredPromotions) result.input.data = CustomMessage(watsonData.context.userPayload.order, 'acquiredPromotion')
                 params.input = result.input
               }
               sendToWatson(params).then(data => resolve(data))
@@ -492,6 +492,29 @@ const sendToWatson = (params) => {
               }).then(data => resolve(data))
             })
             break;
+
+          case "select_address":
+            Gera.selectAddress(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "check_delivery_options":
+            Gera.checkDeliveryOptions(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.hasDeliveryOptions) result.input.quick_replies = new QuickReplies(result.userPayload.deliveryOptions, 'deliveryOptions')
+                params.input = result.input
+              }
+              sendToWatson({ context: watsonData.context }).then(data => resolve(data))
+            })
+            break;
+
+          
 
           case "redirect_to_external_cart":
             Gera.redirectToCart(watsonData).then((result) => {

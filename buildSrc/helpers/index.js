@@ -100,6 +100,19 @@ function QuickReplies(payload, action) {
             }, [])
             break;
 
+        case 'deliveryOptions':
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: `${curr.name} <br> ${curr.term} dia(s)`,
+                    type: "postback_button",
+                    payload: {
+                        value: "<code>" + curr.code
+                    }
+                })
+                return acc
+            }, [])
+            break;
+
         case "installments":
             quick_replies = Object.keys(payload).reduce((acc, curr) => {
                 acc.push({
@@ -342,9 +355,10 @@ function CustomMessage(payload, action) {
 
         case 'acquiredPromotion':
             customMessage = '<b>Parabéns!! Você ganhou:</b> <hr><br>'
-            payload.forEach((acquiredPromotion) => {
-                customMessage += `<b>${acquiredPromotion.title}</b><br>`
-                customMessage += `${acquiredPromotion.description}<br>`
+            payload.acquiredPromotion.forEach((acquiredPromotion) => {
+
+                let header = `<b>${acquiredPromotion.title}</b><br>`
+                header += `${acquiredPromotion.description}<br>`
 
                 let premiosConquistados = []
                 let produtosComDesconto = []
@@ -355,9 +369,16 @@ function CustomMessage(payload, action) {
                         premiosConquistados.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: ${reward.type.description}<br>`)
                     }
                     if (id == 3) {
-                        produtosComDesconto.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: Desconto ${Math.ceil(reward.discount.toFixed(2))}%<br>`)
+                        let item = payload.items.find(item => item.productCode == reward.productCode)
+                        produtosComDesconto.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: Desconto ${Math.ceil(reward.discount.toFixed(2))}%<br>${item ? `Valor: R$ ${item.unitTableValue}<br>A pagar: R$ ${item.unitNetValue}` : ''}`)
+                    }
+
+                    if (id == 4) {
+                        console.log(`Unsupported reward type: id: ${id} desc.: ${reward.type.description}`)
                     }
                 })
+
+                if (premiosConquistados.length > 0 || produtosComDesconto.length > 0) customMessage += header
 
                 if (premiosConquistados.length > 0) {
                     customMessage += `<br><b>Premio(s) conquistado(s):</b><br>`
@@ -365,10 +386,12 @@ function CustomMessage(payload, action) {
                 }
 
                 if (produtosComDesconto.length > 0) {
-                    customMessage += `<br><b>Produto(s) com descont(s):</b><br>`
+                    customMessage += `<br><b>Produto(s) com desconto(s):</b><br>`
                     customMessage += produtosComDesconto.join('<hr>')
                 }
-                customMessage += '<br>'
+
+                if (premiosConquistados.length > 0 || produtosComDesconto.length > 0)
+                    customMessage += '<br><hr><hr>'
             })
 
             break;
