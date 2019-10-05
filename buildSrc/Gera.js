@@ -1563,6 +1563,7 @@ const selectAddress = (watsonData) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 userPayload.order = body
+                delete userPayload.addresses
                 resolve({ input: { addressSelected: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
@@ -1599,10 +1600,12 @@ const checkDeliveryOptions = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
-
-                console.log(JSON.stringify(body, null, 2))
-
-                resolve({ input: { addressSelected: true }, userPayload })
+                if (body.length > 0) {
+                    userPayload.deliveryOptions = body
+                    resolve({ input: { hasDeliveryOptions: true }, userPayload })
+                } else {
+                    resolve({ input: { hasDeliveryOptions: false }, userPayload })
+                }
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
