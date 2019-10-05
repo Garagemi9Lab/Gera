@@ -1626,6 +1626,53 @@ const checkDeliveryOptions = (watsonData) => {
     })
 }
 
+const selectDeliveryOption = (watsonData) => {
+    console.log('Select delivery option method inovked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const deliveryOptionCode = watsonData.output.deliveryOptionCode
+
+        const deliveryOption = {
+            deliveryOptionCode: watsonData.context.deliveryOptions[deliveryCode - 1].code
+        }
+
+        console.log('Delivery option code: ' + deliveryOption.deliveryOptionCode)
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${orderNumber}/deliveryOptions`,
+            headers: new RequestHeaders(watsonData, ORDER),
+            body: JSON.stringify({ deliveryOptionCode })
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                userPayload.order = body
+                resolve({ input: { deliveryOptionsSelected: true }, userPayload })
+
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+        })
+
+    })
+}
+
+
 
 const redirectToCart = (watsonData) => {
     console.log('Redirect to cart method invoked')
@@ -2045,6 +2092,7 @@ module.exports = {
     checkAddresses,
     selectAddress,
     checkDeliveryOptions,
+    selectDeliveryOption,
     redirectToCart,
     getSACToken,
     getNotificationStructuresParents,
