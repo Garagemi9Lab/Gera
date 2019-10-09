@@ -113,6 +113,39 @@ function QuickReplies(payload, action) {
             }, [])
             break;
 
+        case 'paymentPlans':
+            paymentModes = payload.reduce((acc, curr) => {
+                acc[curr.paymentMode.id] = curr.paymentMode.description
+                return acc
+            }, {})
+            quick_replies = Object.keys(paymentModes).reduce((acc, curr) => {
+                acc.push({
+                    title: `${paymentModes[curr]}`,
+                    type: "postback_button",
+                    payload: {
+                        value: "<code>" + curr
+                    }
+                })
+                return acc
+            }, [])
+
+            break;
+
+        case 'showPaymentMode':
+
+            quick_replies = payload.reduce((acc, curr) => {
+                acc.push({
+                    title: `${curr.name}`,
+                    type: "postback_button",
+                    payload: {
+                        value: "<code>" + curr.code
+                    }
+                })
+                return acc
+            }, [])
+
+            break;
+
         case "installments":
             quick_replies = Object.keys(payload).reduce((acc, curr) => {
                 acc.push({
@@ -394,6 +427,20 @@ function CustomMessage(payload, action) {
                     customMessage += '<br><hr><hr>'
             })
 
+            break;
+
+        case 'cartTotal':
+            customMessage = `<b>${payload.order.paymentPlans.paymentMode.description}</b><br>`
+            customMessage += `${payload.order.paymentPlans.name}<br>`
+            customMessage += `Parcela(s):<br>`
+            customMessage += payload.orderInstallments.map((installment, index) => `<span style="color:green;">Parc.${index + 1}</span> R$ ${installment.value}<br>Venc.: ${getDate(installment.dueDate)}`).join('<br>')
+            customMessage += `<br> <hr> <b>Valor a pagar</b><br>`
+            customMessage += `Pedido: R$ ${payload.cartTotal.productsValue}<br>`
+            customMessage += `Entrega: R$ ${payload.cartTotal.deliveryTax}<br>`
+            customMessage += `Taxa Admin.: R$ ${payload.cartTotal.collectionFee}<br>`
+            customMessage += `Conta Corrente: R$ ${payload.cartTotal.creditCheckingAccountValue}<br>`
+            customMessage += `Imposto e comissão: R$ ${payload.cartTotal.commissionValue}<br>`
+            customMessage += `Total: R$ ${payload.cartTotal.totalValue}<br>`
             break;
 
         case 'gifts':

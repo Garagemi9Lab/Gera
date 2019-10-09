@@ -523,6 +523,63 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "check_payment_list":
+            Gera.checkPaymentList(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.hasPaymentPlans) result.input.quick_replies = new QuickReplies(result.userPayload.paymentPlans, 'paymentPlans')
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "show_payment_mode_list":
+            Gera.showPaymentModeList(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.showPaymentMode) result.input.quick_replies = new QuickReplies(result.userPayload.paymentPlans, 'showPaymentMode')
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "select_payment_plan":
+            Gera.selectPaymentPlan(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "check_payment_installments":
+            Gera.checkInstallments(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+          case "get_total":
+            Gera.getTotal(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                if (result.input.gotCartTotal) result.input.data = CustomMessage(watsonData.context.userPayload, 'cartTotal')
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "redirect_to_external_cart":
             Gera.redirectToCart(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })

@@ -1633,11 +1633,6 @@ const selectDeliveryOption = (watsonData) => {
         const orderNumber = userPayload.order.number
         const deliveryOptionCode = watsonData.output.deliveryOptionCode
 
-        const deliveryOption = {
-            deliveryOptionCode: watsonData.context.deliveryOptions[deliveryCode - 1].code
-        }
-
-        console.log('Delivery option code: ' + deliveryOption.deliveryOptionCode)
         const options = {
             method: 'POST',
             url: `${URL}/api/orders/${orderNumber}/deliveryOptions`,
@@ -1648,6 +1643,7 @@ const selectDeliveryOption = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
+                delete userPayload.deliveryOptions
                 userPayload.order = body
                 resolve({ input: { deliveryOptionsSelected: true }, userPayload })
 
@@ -1672,6 +1668,204 @@ const selectDeliveryOption = (watsonData) => {
     })
 }
 
+const checkPaymentList = (watsonData) => {
+    console.log('Check payment list method inovked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/paymentPlans`,
+            headers: new RequestHeaders(watsonData, ORDER),
+
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+
+                body = JSON.parse(body)
+                if (body.length > 0) {
+                    userPayload.paymentPlans = body
+                    resolve({ input: { hasPaymentPlans: true }, userPayload })
+                } else {
+                    resolve({ input: { hasPaymentPlans: false }, userPayload })
+                }
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+        })
+    })
+}
+
+const showPaymentModeList = (watsonData) => {
+    console.log('Show payment mode list method invoked..')
+    return new Promise((resolve, reject) => {
+        let selectedPaymentMode = watsonData.output.selectedPaymentMode
+        let userPayload = watsonData.context.userPayload
+
+        if (selectedPaymentMode) {
+            userPayload.paymentPlans = userPayload.paymentPlans.filter((paymentPlan) => {
+                return paymentPlan.paymentMode.id == selectedPaymentMode
+            })
+
+            if (userPayload.paymentPlans.length > 0) {
+                resolve({ input: { showPaymentMode: true }, userPayload })
+            } else {
+                resolve({ input: { showPaymentMode: false }, userPayload })
+            }
+        } else {
+            console.log('Error on showing payment mode list ')
+            resolve({ input: { showPaymentMode: false }, userPayload })
+        }
+    })
+}
+
+
+
+const selectPaymentPlan = (watsonData) => {
+    console.log('Select payment plan method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const planCode = parseInt(watsonData.output.selectedPaymentPlan)
+
+        const paymentPlan = userPayload.paymentPlans.find((paymentPlan) => paymentPlan.code == planCode)
+
+        if (paymentPlan) {
+            const body = {
+                "paymentPlanCode": paymentPlan.code,
+                "paymentModeId": paymentPlan.paymentMode.id,
+                "installmentsQuantity": 1
+            }
+
+            const options = {
+                method: 'POST',
+                url: `${URL}/api/orders/${orderNumber}/paymentPlans`,
+                headers: new RequestHeaders(watsonData, ORDER),
+                body: JSON.stringify(body)
+
+            }
+            request(options, (error, response, body) => {
+                if (!error && response.statusCode === 200) {
+                    body = JSON.parse(body)
+                    delete userPayload.paymentPlans
+                    userPayload.order = body
+                    resolve({ input: { planSelected: true }, userPayload })
+                } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                    console.log('Expired token')
+                    expiredToken(watsonData, ORDER).then(result => resolve(result))
+                } else if (response && response.statusCode === 400) {
+                    body = JSON.parse(body)
+                    let message = ''
+                    body.forEach(item => message += item.message + '<br>')
+
+                    if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                    resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+                } else {
+                    console.log(response.statusCode)
+                    console.log((body))
+                    console.log('Error on adding products to cart')
+                }
+            })
+        } else {
+            resolve({ input: { planSelected: false }, userPayload })
+        }
+    })
+}
+
+
+const checkInstallments = (watsonData) => {
+    console.log('Check installments method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const paymentPlan = userPayload.order.paymentPlans
+        const orderNumber = userPayload.order.number
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/installments?paymentPlanCode=${paymentPlan.code}&paymentModeId=${paymentPlan.paymentMode.id}&installmentsQuantity=1`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+
+                userPayload.orderInstallments = body
+                console.log(JSON.stringify(body, null, 2))
+
+                resolve({ input: { installmentsChecked: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+
+
+        })
+    })
+}
+
+const getTotal = (watsonData) => {
+    console.log('Get Cart TOTAL method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/totals?collectionSystem=3`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                console.log(JSON.stringify(body, null, 2))
+                userPayload.cartTotal = body
+                resolve({ input: { gotCartTotal: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+
+        })
+    })
+}
 
 
 const redirectToCart = (watsonData) => {
@@ -2093,6 +2287,11 @@ module.exports = {
     selectAddress,
     checkDeliveryOptions,
     selectDeliveryOption,
+    checkPaymentList,
+    showPaymentModeList,
+    selectPaymentPlan,
+    checkInstallments,
+    getTotal,
     redirectToCart,
     getSACToken,
     getNotificationStructuresParents,
