@@ -580,6 +580,28 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "close_cart":
+            Gera.closeCart(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
+          case "check_order_assets":
+            Gera.checkOrderAssets(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                params.input = result.input
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "redirect_to_external_cart":
             Gera.redirectToCart(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })

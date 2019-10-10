@@ -1684,6 +1684,7 @@ const checkPaymentList = (watsonData) => {
             if (!error && response.statusCode === 200) {
 
                 body = JSON.parse(body)
+                body = body.filter(paymentPlan => paymentPlan.isBlocked == false)
                 if (body.length > 0) {
                     userPayload.paymentPlans = body
                     resolve({ input: { hasPaymentPlans: true }, userPayload })
@@ -1802,10 +1803,7 @@ const checkInstallments = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
-
                 userPayload.orderInstallments = body
-                console.log(JSON.stringify(body, null, 2))
-
                 resolve({ input: { installmentsChecked: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
@@ -1843,7 +1841,6 @@ const getTotal = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
-                console.log(JSON.stringify(body, null, 2))
                 userPayload.cartTotal = body
                 resolve({ input: { gotCartTotal: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
@@ -1863,6 +1860,90 @@ const getTotal = (watsonData) => {
                 console.log('Error on adding products to cart')
             }
 
+        })
+    })
+}
+
+const closeCart = (watsonData) => {
+    console.log('Close Cart method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+
+        const options = {
+            method: 'POST',
+            url: `${URL}/api/orders/${orderNumber}/closed`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                userPayload.order = body
+                delete userPayload.orderInstallments
+                delete userPayload.cartTotal
+                resolve({ input: { orderClosed: true }, userPayload })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
+        })
+    })
+}
+
+const checkOrderAssets = (watsonData) => {
+    console.log('Check Order assets method invoked...')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const includeOptions = `includeOptions%5B%5D=${process.env.ORDER_ASSETS_INCLUDE_OPTIONS.split(',').join('&includeOptions%5B%5D=')}`
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}?${includeOptions}`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                let availableAssets
+                if (body.availableAssets && body.availableAssets.length > 0) {
+                    availableAssets = body.availableAssets.filter((asset) => asset.assetType.id == 1 && asset.available == true)
+                    userPayload.availableAssets = availableAssets
+                }
+
+                if (availableAssets.length > 0) {
+                    resolve({ input: { availableAssets: true }, userPayload })
+                } else {
+                    resolve({ input: { availableAssets: false }, userPayload })
+                }
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on adding products to cart')
+            }
         })
     })
 }
@@ -2292,6 +2373,8 @@ module.exports = {
     selectPaymentPlan,
     checkInstallments,
     getTotal,
+    closeCart,
+    checkOrderAssets,
     redirectToCart,
     getSACToken,
     getNotificationStructuresParents,
