@@ -2124,7 +2124,7 @@ const getNotificationQuestions = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response && response.statusCode == 200) {
                 body = JSON.parse(body)
-                userPayload.SAC.questions = body.questions.sort((a, b) => a.questionOrder > b.questionOrder) || []
+                userPayload.SAC.questions = (body.questions.sort((a, b) => a.questionOrder > b.questionOrder) || []).filter((question => question.required))
                 userPayload.SAC.questionsIndex = 0
 
                 resolve({ userPayload, input: { hasQuestions: true } })

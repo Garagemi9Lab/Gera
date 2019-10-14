@@ -301,7 +301,12 @@ function QuickReplies(payload, action) {
                     }, {})
                 })
             }
-            if (id == 10 && payload.questionCode == 72) {
+            if (id == 2) {
+                var allowed_options_index = [1]
+                quick_replies[0].allowed_options_index = allowed_options_index
+            }
+
+            if (id == 10) {
                 var allowed_options_index = [2, 4, 8]
                 quick_replies[0].allowed_options_index = allowed_options_index
             }
@@ -398,17 +403,17 @@ function CustomMessage(payload, action) {
                 acquiredPromotion.rewards.forEach(reward => {
                     let id = reward.type.id
 
-                    if (id == 2) {
+                    if (id == 1 || id == 2) {
                         premiosConquistados.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: ${reward.type.description}<br>`)
                     }
-                    if (id == 3) {
+                    if (id == 3 || id == 4) {
                         let item = payload.items.find(item => item.productCode == reward.productCode)
                         produtosComDesconto.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: Desconto ${Math.ceil(reward.discount.toFixed(2))}%<br>${item ? `Valor: R$ ${item.unitTableValue}<br>A pagar: R$ ${item.unitNetValue}` : ''}`)
                     }
 
-                    if (id == 4) {
-                        console.log(`Unsupported reward type: id: ${id} desc.: ${reward.type.description}`)
-                    }
+                    // if (id == 4) {
+                    // console.log(`Unsupported reward type: id: ${id} desc.: ${reward.type.description}`)
+                    // }
                 })
 
                 if (premiosConquistados.length > 0 || produtosComDesconto.length > 0) customMessage += header
