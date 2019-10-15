@@ -82,6 +82,7 @@ const sendToWatson = (params) => {
           case "get_renegotiation_token":
             Gera.getRenegotiationToken(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              watsonData.context.APP_NAME = process.env.APP_NAME
               sendToWatson({ context: watsonData.context }).then((data) => resolve(data))
             })
             break;

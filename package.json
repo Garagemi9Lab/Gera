@@ -7,7 +7,9 @@
     "prejequiti": "cross-env APP_ENV=jequiti node ./environments",
     "jequiti": "nodemon ./bin/www",
     "pregera": "cross-env APP_ENV=gera  node ./environments",
-    "gera": "nodemon ./bin/www"
+    "gera": "nodemon ./bin/www",
+    "pregerademo": "cross-env APP_ENV=gera_demo  node ./environments",
+    "gerademo": "nodemon ./bin/www"
   },
   "dependencies": {
     "chalk": "^2.4.2",
