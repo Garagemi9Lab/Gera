@@ -2415,12 +2415,12 @@ const getNotificationSACDetails = (watsonData) => {
 
         const options = {
             method: 'GET',
-            uri: `${URL}/api/notification/${selected_notifications}`,
+            uri: `${URL}/api/notifications/${selected_notifications}`,
             headers: new RequestHeaders(watsonData, SAC)
         }
 
         request(options, (error, response, body) => {
-            if (!error && response && response.statusCode) {
+            if (!error && response && response.statusCode == 200) {
                 body = JSON.parse(body)
                 userPayload.SAC.notifications = null
                 userPayload.SAC.notificationDetails = body

@@ -487,6 +487,7 @@ function CustomMessage(payload, action) {
             })
             break;
         case 'notificationDetails':
+            console.log(JSON.stringify(payload, null, 2))
             customMessage = `
             <span>${payload.peopleName}</span><br>
             <span>${payload.notificationStructure.description}</span><br>
