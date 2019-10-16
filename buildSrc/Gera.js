@@ -733,7 +733,7 @@ const createNewOrder = (watsonData, recursiveError) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token..: check it..')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 if (body.message.trim() == "Selecione o(s) item(s) a ser(em) incorporado(s) ao pedido." && !recursiveError) {
                     console.log('Error, itens a incorporar')
                     return createNewOrder(watsonData, true)
@@ -1476,7 +1476,7 @@ const addProductsToCart = watsonData => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
@@ -1519,18 +1519,15 @@ const checkAddresses = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
-
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('error on checking addresses')
             }
 
         })
@@ -1568,18 +1565,15 @@ const selectAddress = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
-
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on selecting address')
             }
         })
     })
@@ -1609,18 +1603,16 @@ const checkDeliveryOptions = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on checking delivery options')
             }
         })
     })
@@ -1650,18 +1642,16 @@ const selectDeliveryOption = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on selecting delivery option')
             }
         })
 
@@ -1694,18 +1684,16 @@ const checkPaymentList = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on checking payment list')
             }
         })
     })
@@ -1768,18 +1756,16 @@ const selectPaymentPlan = (watsonData) => {
                 } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                     console.log('Expired token')
                     expiredToken(watsonData, ORDER).then(result => resolve(result))
-                } else if (response && response.statusCode === 400) {
+                } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                     body = JSON.parse(body)
                     let message = ''
                     body.forEach(item => message += item.message + '<br>')
-
-                    if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                     resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
                 } else {
                     console.log(response.statusCode)
                     console.log((body))
-                    console.log('Error on adding products to cart')
+                    console.log('Error on selecting payment plan')
                 }
             })
         } else {
@@ -1803,23 +1789,22 @@ const checkInstallments = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
+                console.log(JSON.stringify(body, null, 2))
                 userPayload.orderInstallments = body
                 resolve({ input: { installmentsChecked: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on checking installments')
             }
 
 
@@ -1841,23 +1826,22 @@ const getTotal = (watsonData) => {
         request(options, (error, response, body) => {
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
+                console.log(JSON.stringify(body, null, 2))
                 userPayload.cartTotal = body
                 resolve({ input: { gotCartTotal: true }, userPayload })
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on getting Cart TOTAL')
             }
 
         })
@@ -1885,18 +1869,16 @@ const closeCart = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
-
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on closing Cart')
             }
         })
     })
@@ -1931,18 +1913,61 @@ const checkOrderAssets = (watsonData) => {
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
-            } else if (response && response.statusCode === 400) {
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
                 body = JSON.parse(body)
                 let message = ''
                 body.forEach(item => message += item.message + '<br>')
 
-                if (items.length > body.length) message += 'Os outros items foram adicionados com sucesso<br>'
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
                 console.log((body))
-                console.log('Error on adding products to cart')
+                console.log('Error on checking Order assets')
+            }
+        })
+    })
+}
+
+const getOrderAssets = (watsonData) => {
+    console.log('Get order assets method invoked..')
+    return new Promise((resolve, reject) => {
+        let userPayload = watsonData.context.userPayload
+        const orderNumber = userPayload.order.number
+        const availableAssets = userPayload.availableAssets
+        let assetType = availableAssets[0].assetType.id
+
+        const options = {
+            method: 'GET',
+            url: `${URL}/api/orders/${orderNumber}/assets?assetType=${assetType}`,
+            headers: new RequestHeaders(watsonData, ORDER),
+        }
+        request(options, (error, response, body) => {
+            if (!error && response.statusCode === 200) {
+                body = JSON.parse(body)
+                delete userPayload.availableAssets
+                userPayload.assets = body
+
+                if (body.length > 0) {
+                    resolve({ input: { hasAssets: true }, userPayload })
+                } else {
+                    resolve({ input: { hasAssets: false }, userPayload })
+                }
+
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on checking Order assets')
             }
         })
     })
@@ -1965,9 +1990,20 @@ const redirectToCart = (watsonData) => {
                 body = JSON.parse(body)
                 userPayload.user.redirectLink = `<a href="https://qanovocarrinhojequiti.geravd.com.br/External/Login.ashx?token=${body.accessKey}&login=${userPayload.user.id}" target="_blank">Continuar no carrinho</a>`
                 resolve({ userPayload, input: { redirect: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('Error on getting accessKey')
-                console.log(error)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on redirecting to cart')
                 reject(error)
             }
         })
@@ -2008,6 +2044,7 @@ const getNotificationStructuresParents = (watsonData) => {
 }
 
 const getNotificationStructuresWithOptions = (watsonData, isLeaf) => {
+    console.log('Get notification structure with options method invoked..')
     return new Promise((resolve, reject) => {
         const options = {
             method: 'GET',
@@ -2019,10 +2056,20 @@ const getNotificationStructuresWithOptions = (watsonData, isLeaf) => {
             if (!error && response && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body)
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('An error occurred while getting notification structures')
-                console.log(error)
-                console.log(body)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on getting notification structure with options ')
                 reject(error)
             }
         })
@@ -2101,9 +2148,20 @@ const createNotificationSAC = (watsonData) => {
 
                 resolve({ userPayload, input: { notificationCreated: true } })
 
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('An error ocurred while create a new notification SAC')
-                console.log(error)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on creating Notification SAC')
                 reject(error)
             }
         })
@@ -2128,10 +2186,20 @@ const getNotificationQuestions = (watsonData) => {
                 userPayload.SAC.questionsIndex = 0
 
                 resolve({ userPayload, input: { hasQuestions: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('Error on getting notification questions')
-                console.log(error)
-                console.log(body)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on Getting notification questions')
                 reject(error)
             }
         })
@@ -2160,10 +2228,20 @@ const getSACQuestionAnswers = (watsonData) => {
                 body = JSON.parse(body)
                 userPayload.SAC.questionAnswers = body
                 resolve({ userPayload, input: { hasQuestionAnswers: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('Error on getting SAC question Answers')
-                console.log(error)
-                console.log(body)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on Getting SAC Question Answers')
                 reject(error)
             }
         })
@@ -2223,10 +2301,21 @@ const answerSACQuestions = (watsonData) => {
                     resolve({ userPayload, input: { questionAnswered: true } })
                 }
 
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('Error on answering SAC question')
-                console.log(error)
-                console.log(body)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on answering SAC Questions')
+                reject(error)
             }
         })
     })
@@ -2254,10 +2343,21 @@ const closeSACNotification = (watsonData) => {
 
                 resolve({ userPayload, input: { notificationClosed: true } })
 
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('Error on Closing SAC Notification')
-                console.log(error)
-                console.log(body)
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on closing SAC Notification')
+                reject(error)
             }
         })
 
@@ -2287,11 +2387,20 @@ const getSACNotifications = (watsonData) => {
                 resolve({ userPayload, input: { hasNotifications: true } })
             } else if (response && response.statusCode == 404) {
                 resolve({ userPayload, input: { hasNotifications: false } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('An error occurred while getting notifications SAC')
-                console.log(error)
-                console.log(body)
                 console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on getting Notifications SAC')
                 reject(error)
             }
         })
@@ -2299,7 +2408,7 @@ const getSACNotifications = (watsonData) => {
 }
 
 const getNotificationSACDetails = (watsonData) => {
-    console.log('Get notification SAC Details')
+    console.log('Get notification SAC Details method invoked..')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
         let selected_notifications = watsonData.output.selected_notification
@@ -2316,8 +2425,21 @@ const getNotificationSACDetails = (watsonData) => {
                 userPayload.SAC.notifications = null
                 userPayload.SAC.notificationDetails = body
                 resolve({ userPayload, input: { gotNotificationDetails: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
+
+
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
-                console.log('An error ocurred while getting notification details')
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on getting notification SAC Details')
+                reject(error)
             }
         })
 
@@ -2375,6 +2497,7 @@ module.exports = {
     getTotal,
     closeCart,
     checkOrderAssets,
+    getOrderAssets,
     redirectToCart,
     getSACToken,
     getNotificationStructuresParents,

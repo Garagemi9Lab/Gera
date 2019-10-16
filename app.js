@@ -603,6 +603,18 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case 'get_order_assets':
+            Gera.getOrderAssets(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) {
+                params.input = result.input
+                if (result.input.hasAssets) params.input.data = CustomMessage(result.userPayload.assets, 'orderAssets')
+              }
+              sendToWatson(params).then(data => resolve(data))
+            })
+            break;
+
           case "redirect_to_external_cart":
             Gera.redirectToCart(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })

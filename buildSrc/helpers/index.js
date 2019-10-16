@@ -304,6 +304,7 @@ function QuickReplies(payload, action) {
             if (id == 2) {
                 var allowed_options_index = [1]
                 quick_replies[0].allowed_options_index = allowed_options_index
+                quick_replies[0].remove_header = true
             }
 
             if (id == 10) {
@@ -446,6 +447,12 @@ function CustomMessage(payload, action) {
             customMessage += `Conta Corrente: R$ ${payload.cartTotal.creditCheckingAccountValue}<br>`
             customMessage += `Imposto e comissão: R$ ${payload.cartTotal.commissionValue}<br>`
             customMessage += `Total: R$ ${payload.cartTotal.totalValue}<br>`
+            break;
+
+        case 'orderAssets':
+            console.log(JSON.stringify(payload, null, 2))
+            customMessage = `Clique no link abaixo para visualizar os arquivos:<br><br>`
+            customMessage += payload.map(asset => (`<b><a href="${asset.url}" target="_blank">${asset.returnObject.assetType.description}</a></b>`)).join('<br>')
             break;
 
         case 'gifts':
