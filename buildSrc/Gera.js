@@ -115,7 +115,15 @@ const getRenegotiationToken = (watsonData) => {
         getToken(userPayload.user, client_id, client_secret).then((data) => {
             userPayload.user = data.user
             userPayload.tokens.renegotiation = data.token
-            resolve({ userPayload })
+            watsonData.context.userPayload = userPayload
+            getOrderToken(watsonData).then((result) => {
+                watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+                peopleAPI(watsonData).then((result) => {
+                    watsonData.context.userPayload.user.name = result.name
+                    resolve({ userPayload: watsonData.context.userPayload })
+                })
+            })
+
         }).catch((err) => {
             console.log('Error on getting Renegotiation token')
             console.log(err)
@@ -2197,10 +2205,17 @@ const getNotificationQuestions = (watsonData) => {
 
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
+
                 console.log(response.statusCode)
                 console.log((body))
                 console.log('Error on Getting notification questions')
-                reject(error)
+                if (response && response.statusCode == 404) {
+                    body = JSON.parse(body)
+                    resolve({ input: { errorMessage: body.message || 'Um erro ocorreu, tente novamente' }, userPayload })
+                } else {
+
+                    reject(error)
+                }
             }
         })
     })
