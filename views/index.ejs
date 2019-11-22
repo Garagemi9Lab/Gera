@@ -30,26 +30,24 @@
 </head>
 
 <body>
-  <div class="chat-col">
-    <div class="chatbox" style="display: none;">
-      <div class="head">
-        <div class="container">
-          <div class="avatar">
-            <img src="img/logo.png" alt=""></img>
-          </div>
+  <div class="chatbox">
+    <div class="head">
+      <div class="container">
+        <div class="avatar">
+          <img src="img/logo.png" alt=""></img>
         </div>
-      </div>
-      <!-- /head -->
-      <div id="chatlogs"></div>
-      <div class="chat-form input-field" id="chat_footer">
-        <input id="textInput" onkeydown="sendToBot(event, this)" placeholder="Digite algo..." />
-        <button id="sendBtn" disabled>
-          <i class="botao fa fa-arrow-circle-right fa-3x"></i>
-        </button>
+        <i class="logoutIcon material-icons" onclick="logout()">
+          exit_to_app
+        </i>
       </div>
     </div>
-    <div class="chat-button">
-      <i class="fa fa-2x fa-comments"></i>
+    <!-- /head -->
+    <div id="chatlogs"></div>
+    <div class="chat-form input-field" id="chat_footer">
+      <input id="textInput" onkeydown="sendToBot(event, this)" placeholder="Digite algo..." />
+      <button id="sendBtn" disabled>
+        <i class="botao fa fa-arrow-circle-right fa-3x"></i>
+      </button>
     </div>
   </div>
 

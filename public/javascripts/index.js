@@ -1,15 +1,3 @@
-$(document).on("click", ".chat-button", function () {
-    $(".chatbox").toggle('slide', { direction: 'down' }, 700, function () {
-        if (icon.hasClass('fa-times')) {
-            $('#textInput').focus()
-        }
-    })
-
-    var icon = $(this).children()
-    icon.toggleClass('fa-comments')
-    icon.toggleClass('fa-times')
-})
-
 $(document).on('click', '#sendBtn', function (e) {
     var el = $('#textInput')[0]
     sendToBot(e, el)
@@ -38,3 +26,11 @@ $(document).on("click", ".head", function () {
 $(function () {
     $("#tabs").tabs();
 });
+
+function logout() {
+    let response = confirm('Tem certeza que deseja fazer o logout?')
+    if (response) {
+        deleteSession('user')
+        window.location.href = '/'
+    }
+}
