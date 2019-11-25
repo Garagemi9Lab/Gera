@@ -2384,9 +2384,15 @@ const getSACNotifications = (watsonData) => {
     console.log('Get Notifications SAC method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        let dates = watsonData.output.dates
-        let initial = dates.filter(date => date.key == 'initial')[0].value
-        let final = dates.filter(date => date.key == 'end')[0].value
+        // let dates = watsonData.output.dates
+        // let initial = dates.filter(date => date.key == 'initial')[0].value
+        // let final = dates.filter(date => date.key == 'end')[0].value
+        let initialDate = new Date()
+        initialDate.setMonth(initialDate.getMonth() - 2)
+        initialDate.setHours(0, 0, 0)
+        initialDate.setMilliseconds(0)
+        let initial = initialDate.toISOString().split('T')[0]
+        let final = new Date().toISOString().split('T')[0]
 
         const options = {
             method: 'GET',
