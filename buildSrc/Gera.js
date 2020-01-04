@@ -2242,7 +2242,12 @@ const getSACQuestionAnswers = (watsonData) => {
             if (!error && response && response.statusCode == 200) {
                 body = JSON.parse(body)
                 userPayload.SAC.questionAnswers = body
-                resolve({ userPayload, input: { hasQuestionAnswers: true } })
+                if (body.questionCode == 1) {
+                    watsonData.context.userPayload = userPayload
+                    resolve(getSACOrders(watsonData))
+                } else {
+                    resolve({ userPayload, input: { hasQuestionAnswers: true } })
+                }
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
                 console.log('Expired token')
                 expiredToken(watsonData, ORDER).then(result => resolve(result))
@@ -2252,6 +2257,60 @@ const getSACQuestionAnswers = (watsonData) => {
                 body.forEach(item => message += item.message + '<br>')
 
 
+                resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
+            } else {
+                console.log(response.statusCode)
+                console.log((body))
+                console.log('Error on Getting SAC Question Answers')
+                reject(error)
+            }
+        })
+    })
+}
+
+const getSACOrders = (watsonData) => {
+    console.log('Get SAC orders method invoked...')
+    return new Promise((resolve, reject) => {
+
+        let userPayload = watsonData.context.userPayload
+
+        const options = {
+            method: 'GET',
+            uri: `${URL}/api/Orders?includeOptions=representative&includeOptions=businessInformation`,
+            headers: new RequestHeaders(watsonData, SAC)
+        }
+
+        request(options, (error, response, body) => {
+            if (!error && response && response.statusCode == 200) {
+                body = JSON.parse(body)
+                let questionAnswers = userPayload.SAC.questionAnswers
+                if (questionAnswers.possibleValues && questionAnswers.possibleValues.rows && questionAnswers.possibleValues.rows.length > 0) {
+                    let possibleOrders = userPayload.SAC.questionAnswers.possibleValues.rows.map((row) => row.dataRow[0])
+                    let initialDate = new Date()
+                    initialDate.setMonth(initialDate.getMonth() - 3)
+                    initialDate.setHours(0, 0, 0)
+                    initialDate.setMilliseconds(0)
+                    let orders = body.filter(order => {
+                        return possibleOrders.indexOf(`${order.number}`) != -1
+                    }).filter(order => {
+                        let orderDateStr = order.businessInformation.orderingDate
+                        let orderDate = new Date(orderDateStr)
+                        return orderDate >= initialDate
+                    })
+                    let ordersNumber = orders.map(order => `${order.number}`)
+                    questionAnswers.possibleValues.rows = questionAnswers.possibleValues.rows.filter((row) => ordersNumber.indexOf(row.dataRow[0]) != -1)
+                    resolve({ userPayload, input: { hasQuestionAnswers: true } })
+                } else {
+                    resolve({ input: { errorMessage: 'Um erro ocorreu, tente novamente' }, userPayload })
+                }
+                // resolve({ userPayload, input: { hasQuestionAnswers: true } })
+            } else if (response && response.statusCode === 401 || response.statusCode === 205) {
+                console.log('Expired token')
+                expiredToken(watsonData, ORDER).then(result => resolve(result))
+            } else if (response && response.statusCode === 400 || response.statusCode === 405) {
+                body = JSON.parse(body)
+                let message = ''
+                body.forEach(item => message += item.message + '<br>')
                 resolve({ input: { errorMessage: message || 'Um erro ocorreu, tente novamente' }, userPayload })
             } else {
                 console.log(response.statusCode)
@@ -2384,15 +2443,15 @@ const getSACNotifications = (watsonData) => {
     console.log('Get Notifications SAC method invoked')
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
-        // let dates = watsonData.output.dates
-        // let initial = dates.filter(date => date.key == 'initial')[0].value
-        // let final = dates.filter(date => date.key == 'end')[0].value
-        let initialDate = new Date()
-        initialDate.setMonth(initialDate.getMonth() - 2)
-        initialDate.setHours(0, 0, 0)
-        initialDate.setMilliseconds(0)
-        let initial = initialDate.toISOString().split('T')[0]
-        let final = new Date().toISOString().split('T')[0]
+        let dates = watsonData.output.dates
+        let initial = dates.filter(date => date.key == 'initial')[0].value
+        let final = dates.filter(date => date.key == 'end')[0].value
+        // let initialDate = new Date()
+        // initialDate.setMonth(initialDate.getMonth() - 2)
+        // initialDate.setHours(0, 0, 0)
+        // initialDate.setMilliseconds(0)
+        // let initial = initialDate.toISOString().split('T')[0]
+        // let final = new Date().toISOString().split('T')[0]
 
         const options = {
             method: 'GET',

@@ -255,7 +255,7 @@ function QuickReplies(payload, action) {
         case "SACQuestionAnswers":
             // tabela || dominio || tabela faixa
             let id = payload.answerType.id
-            const noneDefaultTableQuestions = [1]
+            const noneDefaultTableQuestions = []
             if ((id == 4 && noneDefaultTableQuestions.indexOf(payload.questionCode) == -1) || id == 2 || id == 10) {
                 quick_replies = [
                     {
@@ -269,6 +269,8 @@ function QuickReplies(payload, action) {
                         }
                     }
                 ]
+
+                if (id == 4 && noneDefaultTableQuestions.indexOf(payload.questionCode) == -1) quick_replies[0].remove_header = true
             }
 
             if (id == 1) {
@@ -411,10 +413,6 @@ function CustomMessage(payload, action) {
                         let item = payload.items.find(item => item.productCode == reward.productCode)
                         produtosComDesconto.push(`<br>Produto: ${reward.productName}<br>Cod.: ${reward.productCode}<br>Qtd: ${reward.quantity}<br>Tipo: Desconto ${Math.ceil(reward.discount.toFixed(2))}%<br>${item ? `Valor: R$ ${item.unitTableValue}<br>A pagar: R$ ${item.unitNetValue}` : ''}`)
                     }
-
-                    // if (id == 4) {
-                    // console.log(`Unsupported reward type: id: ${id} desc.: ${reward.type.description}`)
-                    // }
                 })
 
                 if (premiosConquistados.length > 0 || produtosComDesconto.length > 0) customMessage += header
