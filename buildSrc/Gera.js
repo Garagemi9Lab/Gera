@@ -2284,7 +2284,7 @@ const getSACOrders = (watsonData) => {
                 if (questionAnswers.possibleValues && questionAnswers.possibleValues.rows && questionAnswers.possibleValues.rows.length > 0) {
                     let possibleOrders = userPayload.SAC.questionAnswers.possibleValues.rows.map((row) => row.dataRow[0])
                     let initialDate = new Date()
-                    initialDate.setMonth(initialDate.getMonth() - 5)
+                    initialDate.setMonth(initialDate.getMonth() - 2)
                     initialDate.setHours(0, 0, 0)
                     initialDate.setMilliseconds(0)
                     let orders = body.filter(order => {
