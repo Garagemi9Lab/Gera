@@ -525,6 +525,8 @@ function QuickReplyElement(quick_reply) {
             table.setAttribute('class', 'quick_reply_table')
 
             var allowed_options_index = quick_reply.allowed_options_index || []
+            var allowed_options_index_response = quick_reply.allowed_options_index_response || []
+
             var remove_header = quick_reply.remove_header || false
 
             if (!remove_header) {
@@ -554,12 +556,17 @@ function QuickReplyElement(quick_reply) {
                 if (allowed_options_index.length > 0)
                     row_aux.dataRow = row_aux.dataRow.filter((dtRow, index) => allowed_options_index.indexOf(index) != -1)
 
-                tr.setAttribute('hidden_text', row_aux.dataRow.join(' , '))
                 row_aux.dataRow.forEach((data) => {
                     let td = document.createElement('td')
                     td.innerHTML = data
                     tr.append(td)
                 })
+                let hiddenValue = row_aux.dataRow.join(' , ')
+                if (allowed_options_index_response.length > 0) {
+                    hiddenValue = row_aux.dataRow.filter((dtRow, index) => allowed_options_index_response.indexOf(index) != -1).join(' , ')
+                }
+                tr.setAttribute('hidden_text', hiddenValue)
+
                 table.append(tr)
             })
 

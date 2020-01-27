@@ -2229,9 +2229,6 @@ const getSACQuestionAnswers = (watsonData) => {
         let questionIndex = userPayload.SAC.questionsIndex
         let question = userPayload.SAC.questions[questionIndex]
 
-        console.log(`questionIndex: ${questionIndex}`)
-        console.log(question)
-
         const options = {
             method: 'GET',
             uri: `${URL}/api/notifications/${notificationId}/questions/${question.questionCode}`,
@@ -2287,7 +2284,7 @@ const getSACOrders = (watsonData) => {
                 if (questionAnswers.possibleValues && questionAnswers.possibleValues.rows && questionAnswers.possibleValues.rows.length > 0) {
                     let possibleOrders = userPayload.SAC.questionAnswers.possibleValues.rows.map((row) => row.dataRow[0])
                     let initialDate = new Date()
-                    initialDate.setMonth(initialDate.getMonth() - 3)
+                    initialDate.setMonth(initialDate.getMonth() - 5)
                     initialDate.setHours(0, 0, 0)
                     initialDate.setMilliseconds(0)
                     let orders = body.filter(order => {
@@ -2299,7 +2296,20 @@ const getSACOrders = (watsonData) => {
                     })
                     let ordersNumber = orders.map(order => `${order.number}`)
                     questionAnswers.possibleValues.rows = questionAnswers.possibleValues.rows.filter((row) => ordersNumber.indexOf(row.dataRow[0]) != -1)
-                    resolve({ userPayload, input: { hasQuestionAnswers: true } })
+                    if (questionAnswers.possibleValues.rows.length == 0) {
+                        resolve({ userPayload, input: { hasRecentOrders: false, date: initialDate.toISOString().split('T')[0] } })
+                    } else {
+                        questionAnswers.extraData = {
+                            columns: ['Data', 'Valor', 'Status'],
+                            rows: orders.map(order => ({
+                                Data: new Date(order.businessInformation.orderingDate).toISOString(),
+                                Valor: order.businessInformation.totalAmount,
+                                Status: order.businessInformation.businessStatusName,
+                                number: `${order.number}`
+                            }))
+                        }
+                        resolve({ userPayload, input: { hasQuestionAnswers: true, hasRecentOrders: true } })
+                    }
                 } else {
                     resolve({ input: { errorMessage: 'Um erro ocorreu, tente novamente' }, userPayload })
                 }
@@ -2444,14 +2454,14 @@ const getSACNotifications = (watsonData) => {
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
         let dates = watsonData.output.dates
-        let initial = dates.filter(date => date.key == 'initial')[0].value
-        let final = dates.filter(date => date.key == 'end')[0].value
-        // let initialDate = new Date()
-        // initialDate.setMonth(initialDate.getMonth() - 2)
-        // initialDate.setHours(0, 0, 0)
-        // initialDate.setMilliseconds(0)
-        // let initial = initialDate.toISOString().split('T')[0]
-        // let final = new Date().toISOString().split('T')[0]
+        // let initial = dates.filter(date => date.key == 'initial')[0].value
+        // let final = dates.filter(date => date.key == 'end')[0].value
+        let initialDate = new Date()
+        initialDate.setMonth(initialDate.getMonth() - 2)
+        initialDate.setHours(0, 0, 0)
+        initialDate.setMilliseconds(0)
+        let initial = initialDate.toISOString().split('T')[0]
+        let final = new Date().toISOString().split('T')[0]
 
         const options = {
             method: 'GET',

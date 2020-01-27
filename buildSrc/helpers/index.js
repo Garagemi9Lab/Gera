@@ -255,7 +255,7 @@ function QuickReplies(payload, action) {
         case "SACQuestionAnswers":
             // tabela || dominio || tabela faixa
             let id = payload.answerType.id
-            const noneDefaultTableQuestions = []
+            const noneDefaultTableQuestions = [1]
             if ((id == 4 && noneDefaultTableQuestions.indexOf(payload.questionCode) == -1) || id == 2 || id == 10) {
                 quick_replies = [
                     {
@@ -293,15 +293,56 @@ function QuickReplies(payload, action) {
             }
 
             if (id == 4 && payload.questionCode == 1) {
-                quick_replies.push({
-                    type: 'input-autocomplete',
-                    dataType: 'number',
-                    autocompleteLimit: 5,
-                    data: payload.possibleValues.rows.reduce((acc, row, index) => {
-                        acc[row.dataRow[0]] = '<code>' + index
-                        return acc
-                    }, {})
-                })
+                let columns = payload.possibleValues.columns.map((column) => column.name)
+                let rows = payload.possibleValues.rows.map((row, index) => {
+                    row.value = '<code>' + index
+                    return row
+                }).filter((row) => row.selected == false)
+
+                columns = JSON.parse(JSON.stringify(columns))
+                rows = JSON.parse(JSON.stringify(rows))
+
+                if (payload.questionCode == 1 && payload.extraData) {
+                    columns = columns.concat(payload.extraData.columns)
+                    rows = rows.map(row => {
+                        let orderNumber = row.dataRow[0]
+                        let restRowData = payload.extraData.rows.find(row => row.number == orderNumber)
+                        if (restRowData) {
+                            row.dataRow = [
+                                orderNumber,
+                                restRowData.Data.split('T')[0],
+                                `R$ ${restRowData.Valor}`,
+                                restRowData.Status
+                            ]
+                        }
+                        return row
+                    })
+                }
+
+                let quick_reply = {
+                    type: 'table',
+                    payload: {
+                        columns: columns,
+                        rows: rows,
+                        extraData: payload.extraData
+                    },
+                    // para adicionar o datarow correto no retorno
+                    allowed_options_index_response: [0]
+                }
+                quick_replies = [
+                    quick_reply
+                ]
+
+                if (id == 4 && noneDefaultTableQuestions.indexOf(payload.questionCode) == -1) quick_replies[0].remove_header = true
+                // quick_replies.push({
+                //     type: 'input-autocomplete',
+                //     dataType: 'number',
+                //     autocompleteLimit: 5,
+                //     data: payload.possibleValues.rows.reduce((acc, row, index) => {
+                //         acc[row.dataRow[0]] = '<code>' + index
+                //         return acc
+                //     }, {})
+                // })
             }
             if (id == 2) {
                 var allowed_options_index = [1]
