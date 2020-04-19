@@ -15,14 +15,41 @@ function QuickReplies(payload, action) {
             break;
 
         case 'deliveryModes':
-            quick_replies = payload.reduce((acc, curr) => {
-                acc.push({
-                    title: curr.address,
+            let hasCentralAddress = payload.find(address => address.isWithdrawalCenter == true)
+            let hasDeliveryAddress = payload.find(address => address.isWithdrawalCenter == false) || false
+            if (hasDeliveryAddress) {
+                quick_replies.push({
+                    title: 'Receber no endereço da entrega',
                     type: 'postback_button',
                     payload: {
-                        value: '<code>' + curr.code
+                        value: '<code>' + hasDeliveryAddress.code
                     }
+
                 })
+            }
+            if (hasCentralAddress) {
+                quick_replies.push({
+                    title: 'Retirar na central',
+                    type: 'postback_button',
+                    payload: {
+                        value: '<code>' + hasCentralAddress.code
+                    }
+
+                })
+            }
+            break;
+        case 'deliveryDrawalModes':
+            quick_replies = payload.reduce((acc, curr) => {
+                if (curr.isWithdrawalCenter) {
+                    acc.push({
+                        title: curr.address,
+                        type: 'postback_button',
+                        payload: {
+                            value: '<code>' + curr.code
+                        }
+
+                    })
+                }
                 return acc
             }, [])
             break;

@@ -224,16 +224,39 @@ const sendToWatson = (params) => {
             })
             break;
 
+          case "verify_BM_delivery_mode":
+            Gera.verifyBusinessModelDeliveryMode(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              if (result.input.hasWithDrawalAddresses) params.input.quick_replies = new QuickReplies(result.userPayload.deliveryModes, 'deliveryDrawalModes')
+              sendToWatson(params).then((data) => resolve(data))
+            })
+            break;
           case "select_BM_delivery_mode":
-            Gera.getCycles(watsonData).then((result) => {
+            Gera.verifyCycles(watsonData).then((result) => {
+              watsonData.context = Object.assign({}, watsonData.context, { userPayload: result.userPayload })
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
+              // Gera.getCycles(watsonData).then((result) => {
+              //   watsonData.context = Object.assign({}, watsonData.context, result)
+              //   sendToWatson({
+              //     context: watsonData.context,
+              //     input: {
+              //       action: 'showCycles',
+              //       quick_replies: new QuickReplies(result.userPayload.cycles, 'cycles')
+              //     }
+              //   }).then((data) => resolve(data))
+            })
+            break;
+
+          case "create_order":
+            Gera.createNewOrder(watsonData).then((result) => {
               watsonData.context = Object.assign({}, watsonData.context, result)
-              sendToWatson({
-                context: watsonData.context,
-                input: {
-                  action: 'showCycles',
-                  quick_replies: new QuickReplies(result.userPayload.cycles, 'cycles')
-                }
-              }).then((data) => resolve(data))
+              let params = { context: watsonData.context }
+              if (result.input) params.input = result.input
+              sendToWatson(params).then((data) => resolve(data))
             })
             break;
           // disable select kits

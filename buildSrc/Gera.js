@@ -4,6 +4,8 @@ const ORDER = 'order',
     SAC = 'sac'
 const request = require('request')
 
+const DEBUG = process.env.debug || false
+
 function RequestHeaders(watsonData, type) {
     let tokens = watsonData.context.userPayload.tokens
     let token
@@ -62,9 +64,13 @@ const getToken = (user, client_id, client_secret) => {
             },
             form: formData
         }
+
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
             try {
                 body = JSON.parse(body)
+                if (DEBUG) console.log(body)
                 if (!error && response.statusCode === 200) {
                     let payload = {
                         user: {
@@ -164,7 +170,11 @@ const peopleAPI = (watsonData) => {
             url: `${URL}/api/people?code=${watsonData.context.userPayload.user.id}`,
             headers: new RequestHeaders(watsonData, ORDER)
         }
+
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
+            if (DEBUG) console.log(body)
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body[0] || null)
@@ -187,7 +197,11 @@ const serviceInfoAPI = (watsonData) => {
             url: `${URL}/api/sellers/${watsonData.context.userPayload.user.id}/serviceInfo`,
             headers: new RequestHeaders(watsonData, ORDER)
         }
+
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
+            if (DEBUG) console.log(body)
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 resolve(body)
@@ -211,7 +225,11 @@ const checkSystemParameters = (watsonData) => {
             url: `${URL}/api/parameters?groupCode=${process.env.GROUP_CODE}`,
             headers: new RequestHeaders(watsonData, ORDER)
         }
+
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
+            if (DEBUG) console.log(body)
             if (!error && response.statusCode === 200) {
                 body = JSON.parse(body)
                 userPayload.parameters = body
@@ -434,7 +452,10 @@ const checkOpenOrders = (watsonData) => {
             body: JSON.stringify(retrievedOrder)
         }
 
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
+            if (DEBUG) console.log(body)
             let userPayload = watsonData.context.userPayload
             if (!error && response.statusCode == 201) {
                 // Order Opened check if it has items or not. 
@@ -475,10 +496,13 @@ const getBusinessModels = (watsonData) => {
             headers: new RequestHeaders(watsonData, ORDER)
         }
 
+        if (DEBUG) console.log(options)
+
         let userPayload = watsonData.context.userPayload
 
         request(options, (error, response, body) => {
             body = JSON.parse(body)
+            if (DEBUG) console.log(body)
             if (!error && response.statusCode === 200) {
 
                 userPayload.businessModels = body || null
@@ -581,8 +605,11 @@ const getSellerData = (watsonData) => {
             headers: new RequestHeaders(watsonData, ORDER)
         }
 
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
             body = JSON.parse(body)
+            if (DEBUG) console.log(body)
             if (!error && response.statusCode === 200) {
                 resolve(body || null)
             } else if (response && response.statusCode === 401 || response.statusCode === 205) {
@@ -593,6 +620,28 @@ const getSellerData = (watsonData) => {
                 reject({ err: body })
             }
         })
+    })
+}
+
+const verifyBusinessModelDeliveryMode = (watsonData) => {
+    console.log('Verify Business Model Delivery mode')
+    return new Promise((resolve, reject) => {
+        const deliveryCode = watsonData.output.deliveryCode
+        let userPayload = watsonData.context.userPayload
+        const deliveryMode = userPayload.deliveryModes.filter((item) => {
+            return item.code == deliveryCode
+        })[0] || null
+        let hasDeliveryAddress = false
+        let hasWithDrawalAddresses = false
+        if (deliveryMode) {
+            hasDeliveryAddress = true
+            if (deliveryMode.isWithdrawalCenter) {
+                let withDrawalDeliveryModes = userPayload.deliveryModes.filter(item => item.isWithdrawalCenter)
+                if (withDrawalDeliveryModes && withDrawalDeliveryModes.length > 0) hasWithDrawalAddresses = true
+            }
+        }
+
+        resolve({ userPayload, input: { hasDeliveryAddress, hasWithDrawalAddresses } })
     })
 }
 
@@ -615,6 +664,30 @@ const selectBMDeliveryMode = (watsonData) => {
             console.log('Error on selecting Business model delivery mode')
             reject()
         }
+
+    })
+}
+
+const verifyCycles = (watsonData) => {
+    console.log('Verify cycles method invoked')
+    return new Promise((resolve, reject) => {
+        selectBMDeliveryMode(watsonData).then((result) => {
+            watsonData.context = Object.assign({}, watsonData.context, result)
+            let userPayload = watsonData.context.userPayload
+            let useCompositeMarketing = userPayload.businessModel.configurationSystem.useCompositeMarketing
+            let selectMarketingMixCycle = userPayload.user.serviceInfo.selectMarketingMixCycle
+
+            let hasCycles = false
+            if (useCompositeMarketing && selectMarketingMixCycle) hasCycles = true
+
+            userPayload.hasCycles = hasCycles
+            if (hasCycles) {
+                console.error(`Verify um modelo comercial com possibilidades de ciclos...`)
+                reject()
+            } else {
+                resolve({ userPayload, input: { hasCycles: false } })
+            }
+        })
 
     })
 }
@@ -713,6 +786,7 @@ const createNewOrder = (watsonData, recursiveError) => {
     return new Promise((resolve, reject) => {
         let userPayload = watsonData.context.userPayload
         let marketingCycle = parseInt(userPayload.user.selectedCycle)
+        console.log(userPayload.businessModel)
         let distributionCenterCode = userPayload.businessModel.deliveryMode.distributionCenterCode || null
         const order = {
             representativeCode: userPayload.user.id,
@@ -721,17 +795,22 @@ const createNewOrder = (watsonData, recursiveError) => {
             collectionMode: process.env.COLLECTION_MODE,
             collectionSystem: process.env.COLLECTION_SYSTEM,
             distributionCenterCode,
-            marketingCycle: marketingCycle,
             isWithdrawalCenter: userPayload.businessModel.deliveryMode.isWithdrawalCenter,
             originSystem: process.env.ORIGIN_SYSTEM,
             startNewCycle: false
         }
+
+        if (userPayload.hasCycles) order.marketingCycle = marketingCycle
+
         const options = {
             method: 'POST',
             url: `${URL}/api/orders`,
             headers: new RequestHeaders(watsonData, ORDER),
             body: JSON.stringify(order)
         }
+
+        if (DEBUG) console.log(options)
+
         request(options, (error, response, body) => {
             body = JSON.parse(body)
             if (!error && response.statusCode === 201) {
@@ -2553,6 +2632,8 @@ module.exports = {
     getBusinessModels,
     getBusinessModelDeliveryMode,
     getCycles,
+    verifyCycles,
+    verifyBusinessModelDeliveryMode,
     getStarterKit,
     selectKit,
     createNewOrder,
